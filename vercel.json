@@ -4,7 +4,13 @@
   "framework": "vite",
   "installCommand": "npm install --legacy-peer-deps",
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
 
 
