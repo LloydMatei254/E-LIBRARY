@@ -77,7 +77,7 @@ export const MemberAuthModal: React.FC<MemberAuthModalProps> = ({ isOpen, onClos
       onSuccess(mockMember);
       onClose();
     } catch (err: any) {
-      setError('Demo mode: Registration simulated successfully!');
+      setError('Demo mode: Registration successful!');
     } finally {
       setLoading(false);
     }

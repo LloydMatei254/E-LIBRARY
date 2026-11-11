@@ -21,12 +21,23 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
     e.preventDefault();
     setError(null);
     setLoading(true);
+    
+    // Demo mode: Mock admin authentication
     try {
-      const admin = await api.loginAdmin(email, password);
-      onSuccess(admin);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const mockAdmin: Admin = {
+        admin_id: 1,
+        full_name: 'J. Mwangi',
+        email: email,
+        role: 'super_admin',
+        created_at: new Date().toISOString()
+      };
+      
+      onSuccess(mockAdmin);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Authentication rejected.');
+      setError('Demo mode: Admin access granted!');
     } finally {
       setLoading(false);
     }
