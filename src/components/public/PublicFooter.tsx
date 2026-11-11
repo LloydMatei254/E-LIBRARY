@@ -30,7 +30,6 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({
             </div>
             <p className="text-[11px] text-stone-400 leading-relaxed">
               We believe books have the power to change minds and inspire academic scholarship.
-              A complete university library management system with Python OOP and SQLite.
             </p>
           </div>
 
@@ -89,18 +88,8 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-stone-500">
+        <div className="text-[11px] text-stone-500">
           <span>© 2026 Berzowanley Online Library. All Rights Reserved.</span>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onOpenDefense}
-              className="hover:text-white transition-colors"
-            >
-              Marking Defense (40 Marks)
-            </button>
-            <span>·</span>
-            <span>Python 3.10 & SQLite3</span>
-          </div>
         </div>
       </div>
     </footer>

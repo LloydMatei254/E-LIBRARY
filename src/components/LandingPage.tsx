@@ -168,7 +168,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               <p className="text-base text-stone-600 max-w-lg leading-relaxed font-sans">
                 Your next favorite story or academic breakthrough is just a page away.
-                Explore our university library collection powered by Python OOP and SQLite.
+                Explore our university library collection and discover your next great read.
                 Browse our dedicated Catalogue, Categories, and Bestseller collections publicly anytime.
               </p>
 

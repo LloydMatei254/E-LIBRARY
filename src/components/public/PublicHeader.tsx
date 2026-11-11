@@ -40,13 +40,6 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
           </span>
           <div className="flex items-center gap-3 text-slate-400">
             <span>Desk: +254 712 345 678</span>
-            <span className="text-white/20">|</span>
-            <button
-              onClick={onOpenDefense}
-              className="text-amber-300 hover:text-white font-medium transition-colors"
-            >
-              CMT210 Defense (40 Marks)
-            </button>
           </div>
         </div>
       </div>
@@ -113,12 +106,6 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
               }`}
             >
               BESTSELLERS
-            </button>
-            <button
-              onClick={onOpenDefense}
-              className="hover:text-amber-800 transition-colors pb-0.5 text-amber-800 font-bold"
-            >
-              CMT210 DEFENSE
             </button>
           </nav>
 

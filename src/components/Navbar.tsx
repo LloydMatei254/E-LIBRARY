@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Book, Search, LogOut, ShieldCheck, User, Code2, ArrowLeftRight, X, Phone, Mail, Clock, MapPin, Info } from 'lucide-react';
+import { Book, Search, LogOut, ShieldCheck, User, ArrowLeftRight, X, Phone, Mail, Clock, MapPin, Info } from 'lucide-react';
 import { Admin, Member } from '../types';
 
 interface NavbarProps {
@@ -72,21 +72,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
 
           <div className="flex items-center gap-3 ml-auto text-xs">
-            {/* Quick access to Circulation Desk and Marking Defense */}
+            {/* Quick access to the Circulation Desk */}
             <button
               onClick={() => onNavigate('issue-return')}
               className="text-slate-600 hover:text-blue-600 transition-colors hidden md:flex items-center gap-1 font-medium"
             >
               <ArrowLeftRight className="w-3.5 h-3.5 text-blue-500" />
               <span>Issue & Return Desk</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('presentation')}
-              className="text-amber-700 hover:text-amber-800 transition-colors hidden md:flex items-center gap-1 font-semibold"
-            >
-              <Code2 className="w-3.5 h-3.5 text-amber-600" />
-              <span>CMT210 Marking Defense</span>
             </button>
 
             {adminUser ? (
@@ -308,14 +300,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             </p>
             <div className="space-y-2 text-xs bg-slate-50 p-3.5 rounded-lg border border-slate-200">
               <div className="flex justify-between">
-                <span className="text-slate-500">Architecture:</span>
-                <span className="font-semibold text-slate-900 font-mono">Python 3.10 OOP</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">DBMS:</span>
-                <span className="font-semibold text-slate-900 font-mono">SQLite3 (10 Relational Schemas)</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-slate-500">Default Loan Period:</span>
                 <span className="font-semibold text-slate-900">14 Days</span>
               </div>
@@ -324,15 +308,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="font-semibold text-slate-900">KES 50.00 / day</span>
               </div>
             </div>
-            <button
-              onClick={() => {
-                setIsAboutOpen(false);
-                onNavigate('presentation');
-              }}
-              className="mt-4 w-full py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-            >
-              View CMT210 Marking Defense & OOP Architecture &rarr;
-            </button>
           </div>
         </div>
       )}

@@ -37,7 +37,7 @@ export const CategoriesView: React.FC = () => {
     e.preventDefault();
     try {
       await api.addCategory(name, desc);
-      notify(`Category "${name}" created in SQLite database.`);
+      notify(`Category "${name}" created.`);
       setName('');
       setDesc('');
       setIsModalOpen(false);
@@ -112,7 +112,7 @@ export const CategoriesView: React.FC = () => {
             {loading ? (
               <tr>
                 <td colSpan={4} className="text-center py-8 text-slate-400">
-                  Loading categories from SQLite database...
+                  Loading categories...
                 </td>
               </tr>
             ) : categories.length === 0 ? (

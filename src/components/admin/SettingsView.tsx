@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, ShieldCheck, Database, CheckCircle2, Save } from 'lucide-react';
+import { Settings, CheckCircle2, Save } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
   const [loanPeriod, setLoanPeriod] = useState(14);
@@ -28,7 +28,7 @@ export const SettingsView: React.FC = () => {
           System & Policy Settings
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Circulation policy thresholds, DBMS integrity flags, and institutional preferences
+          Circulation policies and library preferences
         </p>
       </div>
 
@@ -54,7 +54,7 @@ export const SettingsView: React.FC = () => {
                 className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"
               />
               <span className="text-[11px] text-slate-400 mt-1 block">
-                Deliverable default: 14 days auto-calculated upon book issue.
+                Standard time allowed for each loan.
               </span>
             </div>
 
@@ -70,7 +70,7 @@ export const SettingsView: React.FC = () => {
                 className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"
               />
               <span className="text-[11px] text-slate-400 mt-1 block">
-                Assessed automatically per overdue day (KES 50.00).
+                Fine charged for each overdue day: KES {fineRate.toFixed(2)}.
               </span>
             </div>
 
@@ -87,7 +87,7 @@ export const SettingsView: React.FC = () => {
                 className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"
               />
               <span className="text-[11px] text-slate-400 mt-1 block">
-                Enforced by Member OOP model <code className="font-mono">can_borrow()</code>.
+                Maximum number of books a member may borrow at one time.
               </span>
             </div>
 
@@ -101,33 +101,6 @@ export const SettingsView: React.FC = () => {
                 onChange={(e) => setLibraryName(e.target.value)}
                 className="w-full px-3 py-1.5 rounded-lg border border-slate-300"
               />
-            </div>
-          </div>
-        </div>
-
-        {/* Database Health Card */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
-            <Database className="w-4 h-4 text-emerald-600" />
-            <span>Python SQLite Relational Engine Status</span>
-          </h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <span className="text-slate-500 block">DBMS Engine:</span>
-              <span className="font-semibold text-slate-900 font-mono">SQLite 3.10 (ACID Compliant)</span>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <span className="text-slate-500 block">Database Storage:</span>
-              <span className="font-semibold text-slate-900 font-mono">backend/library.db</span>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <span className="text-slate-500 block">Foreign Key Constraints:</span>
-              <span className="font-semibold text-emerald-700 font-mono">PRAGMA foreign_keys = ON</span>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <span className="text-slate-500 block">OOP Architecture:</span>
-              <span className="font-semibold text-indigo-700 font-mono">Domain Models + Service Layer</span>
             </div>
           </div>
         </div>

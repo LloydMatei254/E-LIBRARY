@@ -11,7 +11,6 @@ import {
   FileText,
   Settings,
   ArrowLeft,
-  GraduationCap,
 } from 'lucide-react';
 
 export type AdminTab =
@@ -188,16 +187,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </button>
       </nav>
 
-      {/* Bottom Shortcuts: Return to Public Catalogue & CMT210 Marking Defense */}
+      {/* Return to the public catalogue */}
       <div className="p-3 border-t border-indigo-950/80 space-y-1.5 text-xs">
-        <button
-          onClick={onOpenDefense}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-amber-300 hover:text-white hover:bg-amber-500/10 transition-colors font-medium text-[11px]"
-        >
-          <GraduationCap className="w-4 h-4 shrink-0 text-amber-400" />
-          <span>CMT210 Marking Defense</span>
-        </button>
-
         <button
           onClick={onExitToCatalogue}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-indigo-200/70 hover:text-white hover:bg-white/5 transition-colors font-medium text-[11px]"

@@ -112,7 +112,7 @@ export const AuthorsView: React.FC = () => {
             {loading ? (
               <tr>
                 <td colSpan={4} className="text-center py-8 text-slate-400">
-                  Loading authors from SQLite database...
+                  Loading authors...
                 </td>
               </tr>
             ) : authors.length === 0 ? (

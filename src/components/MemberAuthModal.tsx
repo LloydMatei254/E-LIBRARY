@@ -32,25 +32,12 @@ export const MemberAuthModal: React.FC<MemberAuthModalProps> = ({ isOpen, onClos
     setError(null);
     setLoading(true);
     
-    // Demo mode: Mock authentication for frontend-only deployment
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Mock member data
-      const mockMember: Member = {
-        member_id: 1,
-        full_name: 'Beatrice Wanjiku',
-        email: loginEmail,
-        phone: '+254 712 345 678',
-        status: 'active',
-        registered_at: new Date().toISOString()
-      };
-      
-      onSuccess(mockMember);
+      const member = await api.loginMember(loginEmail, loginPassword);
+      onSuccess(member);
       onClose();
     } catch (err: any) {
-      setError('Demo mode: Login simulated successfully!');
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -61,23 +48,17 @@ export const MemberAuthModal: React.FC<MemberAuthModalProps> = ({ isOpen, onClos
     setError(null);
     setLoading(true);
     
-    // Demo mode: Mock registration
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const mockMember: Member = {
-        member_id: Math.floor(Math.random() * 1000) + 100,
+      const member = await api.registerMember({
         full_name: regName,
         email: regEmail,
         phone: regPhone,
-        status: 'active',
-        registered_at: new Date().toISOString()
-      };
-      
-      onSuccess(mockMember);
+        password: regPassword,
+      });
+      onSuccess(member);
       onClose();
     } catch (err: any) {
-      setError('Demo mode: Registration successful!');
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }

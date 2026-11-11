@@ -11,27 +11,20 @@ import {
   DBMSSchemaResponse,
   OOPTestReport,
 } from '../types';
+import { handleMockApiRequest } from './mockApi';
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE !== 'false';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
+const apiFetch = (path: string, init?: RequestInit) => DEMO_MODE
+  ? handleMockApiRequest(path, init)
+  : fetch(`${API_BASE_URL}${path}`, init);
 
 export const api = {
   // Dashboard
   async getDashboard(): Promise<DashboardMetrics> {
-    // Demo mode: Return mock dashboard
-    return {
-      total_books: 15,
-      total_members: 8,
-      active_loans: 4,
-      overdue_loans: 1,
-      total_fines_unpaid: 300,
-      total_reservations_pending: 2,
-      borrowing_trends: [
-        { month: 'Jan', count: 12 },
-        { month: 'Feb', count: 18 },
-        { month: 'Mar', count: 15 },
-        { month: 'Apr', count: 22 },
-        { month: 'May', count: 25 },
-        { month: 'Jun', count: 20 }
-      ]
-    };
+    const res = await apiFetch('/api/dashboard');
+    if (!res.ok) throw new Error('Failed to fetch dashboard metrics');
+    return res.json();
   },
 
   // Books
@@ -40,19 +33,19 @@ export const api = {
     if (params?.category_id) query.set('category_id', String(params.category_id));
     if (params?.search) query.set('search', params.search);
     if (params?.available_only) query.set('available_only', 'true');
-    const res = await fetch(`/api/books?${query.toString()}`);
+    const res = await apiFetch(`/api/books?${query.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch books');
     return res.json();
   },
 
   async getBookById(id: number): Promise<Book> {
-    const res = await fetch(`/api/books/${id}`);
+    const res = await apiFetch(`/api/books/${id}`);
     if (!res.ok) throw new Error('Book not found');
     return res.json();
   },
 
   async addBook(bookData: Partial<Book> & { admin_id?: number }): Promise<Book> {
-    const res = await fetch('/api/books', {
+    const res = await apiFetch('/api/books', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bookData),
@@ -63,7 +56,7 @@ export const api = {
   },
 
   async updateBook(id: number, bookData: Partial<Book>): Promise<Book> {
-    const res = await fetch(`/api/books/${id}`, {
+    const res = await apiFetch(`/api/books/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bookData),
@@ -74,7 +67,7 @@ export const api = {
   },
 
   async deleteBook(id: number): Promise<boolean> {
-    const res = await fetch(`/api/books/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/books/${id}`, { method: 'DELETE' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to delete book');
     return data.success;
@@ -82,13 +75,13 @@ export const api = {
 
   // Categories & Authors
   async getCategories(): Promise<Category[]> {
-    const res = await fetch('/api/categories');
+    const res = await apiFetch('/api/categories');
     if (!res.ok) throw new Error('Failed to fetch categories');
     return res.json();
   },
 
   async addCategory(name: string, description: string = ''): Promise<Category> {
-    const res = await fetch('/api/categories', {
+    const res = await apiFetch('/api/categories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ category_name: name, description }),
@@ -99,20 +92,20 @@ export const api = {
   },
 
   async deleteCategory(id: number): Promise<boolean> {
-    const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/categories/${id}`, { method: 'DELETE' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to delete category');
     return data.success;
   },
 
   async getAuthors(): Promise<Author[]> {
-    const res = await fetch('/api/authors');
+    const res = await apiFetch('/api/authors');
     if (!res.ok) throw new Error('Failed to fetch authors');
     return res.json();
   },
 
   async addAuthor(name: string, biography: string = ''): Promise<Author> {
-    const res = await fetch('/api/authors', {
+    const res = await apiFetch('/api/authors', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ author_name: name, biography }),
@@ -123,20 +116,20 @@ export const api = {
   },
 
   async deleteAuthor(id: number): Promise<boolean> {
-    const res = await fetch(`/api/authors/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/authors/${id}`, { method: 'DELETE' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to delete author');
     return data.success;
   },
 
   async getReports(): Promise<any> {
-    const res = await fetch('/api/reports');
+    const res = await apiFetch('/api/reports');
     if (!res.ok) throw new Error('Failed to fetch reports');
     return res.json();
   },
 
   async updateReservationStatus(id: number, status: string): Promise<boolean> {
-    const res = await fetch(`/api/reservations/${id}/status`, {
+    const res = await apiFetch(`/api/reservations/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -151,13 +144,13 @@ export const api = {
     const query = new URLSearchParams();
     if (params?.search) query.set('search', params.search);
     if (params?.status) query.set('status', params.status);
-    const res = await fetch(`/api/members?${query.toString()}`);
+    const res = await apiFetch(`/api/members?${query.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch members');
     return res.json();
   },
 
   async updateMemberStatus(memberId: number, status: string): Promise<boolean> {
-    const res = await fetch(`/api/members/${memberId}/status`, {
+    const res = await apiFetch(`/api/members/${memberId}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -169,7 +162,7 @@ export const api = {
 
   // Auth
   async loginAdmin(email: string, password: string): Promise<Admin> {
-    const res = await fetch('/api/login/admin', {
+    const res = await apiFetch('/api/login/admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -180,7 +173,7 @@ export const api = {
   },
 
   async loginMember(email: string, password: string): Promise<Member> {
-    const res = await fetch('/api/login/member', {
+    const res = await apiFetch('/api/login/member', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -191,7 +184,7 @@ export const api = {
   },
 
   async registerMember(payload: { full_name: string; email: string; phone: string; password?: string }): Promise<Member> {
-    const res = await fetch('/api/members/register', {
+    const res = await apiFetch('/api/members/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -203,7 +196,7 @@ export const api = {
 
   // Issue & Return
   async issueBook(memberIdOrEmail: string, bookIdOrIsbn: string, adminId: number = 1): Promise<any> {
-    const res = await fetch('/api/issue', {
+    const res = await apiFetch('/api/issue', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -218,7 +211,7 @@ export const api = {
   },
 
   async returnBook(bookIdOrIsbn: string, condition: string = 'Good', damageFee: number = 0): Promise<any> {
-    const res = await fetch('/api/return', {
+    const res = await apiFetch('/api/return', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -233,7 +226,7 @@ export const api = {
   },
 
   async getActiveLoans(): Promise<Borrowing[]> {
-    const res = await fetch('/api/loans/active');
+    const res = await apiFetch('/api/loans/active');
     if (!res.ok) throw new Error('Failed to fetch active loans');
     return res.json();
   },
@@ -241,13 +234,13 @@ export const api = {
   // Fines
   async getFines(memberId?: number): Promise<Fine[]> {
     const query = memberId ? `?member_id=${memberId}` : '';
-    const res = await fetch(`/api/fines${query}`);
+    const res = await apiFetch(`/api/fines${query}`);
     if (!res.ok) throw new Error('Failed to fetch fines');
     return res.json();
   },
 
   async payFine(fineId: number): Promise<boolean> {
-    const res = await fetch(`/api/fines/${fineId}/pay`, { method: 'POST' });
+    const res = await apiFetch(`/api/fines/${fineId}/pay`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Payment failed');
     return data.success;
@@ -256,13 +249,13 @@ export const api = {
   // Reservations
   async getReservations(memberId?: number): Promise<Reservation[]> {
     const query = memberId ? `?member_id=${memberId}` : '';
-    const res = await fetch(`/api/reservations${query}`);
+    const res = await apiFetch(`/api/reservations${query}`);
     if (!res.ok) throw new Error('Failed to fetch reservations');
     return res.json();
   },
 
   async createReservation(memberId: number, bookId: number): Promise<any> {
-    const res = await fetch('/api/reservations', {
+    const res = await apiFetch('/api/reservations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ member_id: memberId, book_id: bookId }),
@@ -274,13 +267,13 @@ export const api = {
 
   // CMT210 Marking & Schema Explorer
   async getSchema(): Promise<DBMSSchemaResponse> {
-    const res = await fetch('/api/schema');
+    const res = await apiFetch('/api/schema');
     if (!res.ok) throw new Error('Failed to fetch DBMS schema');
     return res.json();
   },
 
   async executeSql(query: string): Promise<any> {
-    const res = await fetch('/api/sql', {
+    const res = await apiFetch('/api/sql', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
@@ -291,13 +284,13 @@ export const api = {
   },
 
   async runOOPTests(): Promise<OOPTestReport> {
-    const res = await fetch('/api/test-oop');
+    const res = await apiFetch('/api/test-oop');
     if (!res.ok) throw new Error('Failed to run OOP test suite');
     return res.json();
   },
 
   async getCodeBundle(): Promise<{ bundle: { filename: string; title: string; content: string }[] }> {
-    const res = await fetch('/api/code-bundle');
+    const res = await apiFetch('/api/code-bundle');
     if (!res.ok) throw new Error('Failed to fetch code bundle');
     return res.json();
   },

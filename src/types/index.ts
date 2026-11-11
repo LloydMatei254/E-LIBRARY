@@ -10,7 +10,7 @@ export interface Book {
   pages?: number;
   total_copies: number;
   available_copies: number;
-  is_available: boolean;
+  is_available?: boolean;
   shelf_location?: string;
   description?: string;
   cover_image?: string;

@@ -55,7 +55,7 @@ export const ReportsView: React.FC = () => {
             Circulation & Audit Reports
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Operational telemetry and analytical aggregates from Python SQLite engine
+            Circulation activity and library performance summaries
           </p>
         </div>
 
