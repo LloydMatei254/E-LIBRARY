@@ -48,12 +48,12 @@ export const PublicCategoriesPage: React.FC<PublicCategoriesPageProps> = ({
   const [selectedCatId, setSelectedCatId] = useState<number | null>(initialCategoryId);
   const [previewBook, setPreviewBook] = useState<Book | null>(null);
 
-  const categoryThemes: Record<number, { sub: string; icon: any; bg: string; accent: string }> = {
-    1: { sub: 'Python, AI, Algorithms & Systems', icon: Code2, bg: 'from-[#17263c] to-[#0f172a]', accent: 'text-blue-300' },
-    2: { sub: 'Physics, Cosmology & Mathematics', icon: Sparkles, bg: 'from-[#064e3b] to-[#022c22]', accent: 'text-emerald-300' },
-    3: { sub: 'Economics, Value Investing & Strategy', icon: Bookmark, bg: 'from-[#78350f] to-[#451a03]', accent: 'text-amber-300' },
-    4: { sub: 'Classical Prose & African Literature', icon: BookOpen, bg: 'from-[#881337] to-[#4c0519]', accent: 'text-rose-300' },
-    5: { sub: 'Civilizations, Politics & Modern History', icon: GraduationCap, bg: 'from-[#292524] to-[#1c1917]', accent: 'text-stone-300' },
+  const categoryThemes: Record<number, { sub: string; icon: any; image: string; accent: string }> = {
+    1: { sub: 'Python, AI, Algorithms & Systems', icon: Code2, image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&q=80', accent: 'text-blue-300' },
+    2: { sub: 'Physics, Cosmology & Mathematics', icon: Sparkles, image: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=1200&q=80', accent: 'text-emerald-300' },
+    3: { sub: 'Economics, Value Investing & Strategy', icon: Bookmark, image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&q=80', accent: 'text-amber-300' },
+    4: { sub: 'Classical Prose & African Literature', icon: BookOpen, image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80', accent: 'text-rose-300' },
+    5: { sub: 'Civilizations, Politics & Modern History', icon: GraduationCap, image: 'https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=1200&q=80', accent: 'text-stone-300' },
   };
 
   const handleBorrow = (book: Book) => {
@@ -259,7 +259,7 @@ export const PublicCategoriesPage: React.FC<PublicCategoriesPageProps> = ({
                   const theme = categoryThemes[cat.category_id] || {
                     sub: 'Academic Curriculum',
                     icon: Layers,
-                    bg: 'from-[#1c1917] to-[#0c0a09]',
+                    image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80',
                     accent: 'text-amber-200',
                   };
                   const IconComp = theme.icon;
@@ -271,19 +271,26 @@ export const PublicCategoriesPage: React.FC<PublicCategoriesPageProps> = ({
                       className="bg-white rounded-2xl border border-stone-200 shadow-2xs hover:shadow-xl transition-all overflow-hidden flex flex-col justify-between group"
                     >
                       {/* Top Header Card */}
-                      <div className={`p-6 bg-gradient-to-br ${theme.bg} text-white relative overflow-hidden`}>
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-                        <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                          <IconComp className={`w-6 h-6 ${theme.accent} stroke-[1.8]`} />
-                        </div>
-                        <h3 className="text-xl font-serif font-bold text-white">
-                          {cat.category_name}
-                        </h3>
-                        <p className="text-xs text-stone-300 mt-1 line-clamp-1">
-                          {theme.sub}
-                        </p>
-                        <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-[11px] font-mono text-amber-200">
-                          <span>{booksInCat.length} Titles Available</span>
+                      <div className="relative min-h-[244px] overflow-hidden p-6 text-white">
+                        <img
+                          src={theme.image}
+                          alt=""
+                          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-br from-black/65 via-black/35 to-black/70" />
+                        <div className="relative z-10">
+                          <div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <IconComp className={`w-6 h-6 ${theme.accent} stroke-[1.8]`} />
+                          </div>
+                          <h3 className="text-xl font-serif font-bold text-white">
+                            {cat.category_name}
+                          </h3>
+                          <p className="text-xs text-stone-100 mt-1 line-clamp-1">
+                            {theme.sub}
+                          </p>
+                          <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/35 backdrop-blur-sm text-[11px] font-mono text-amber-200">
+                            <span>{booksInCat.length} Titles Available</span>
+                          </div>
                         </div>
                       </div>
 
