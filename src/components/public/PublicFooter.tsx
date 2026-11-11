@@ -92,6 +92,10 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-stone-500">
           <span>© 2026 Berzowanley Online Library. All Rights Reserved.</span>
           <div className="flex items-center gap-4">
+            <button
+              onClick={onOpenDefense}
+              className="hover:text-white transition-colors"
+            >
               Marking Defense (40 Marks)
             </button>
             <span>·</span>
