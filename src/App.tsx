@@ -53,18 +53,8 @@ export default function App() {
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
   const [selectedBookForDetails, setSelectedBookForDetails] = useState<Book | null>(null);
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const [bList, cList] = await Promise.all([api.getBooks(), api.getCategories()]);
-        setBooks(bList);
-        setCategories(cList);
-      } catch (err) {
-        console.error('Error fetching initial library data:', err);
-      }
-    };
-    init();
-  }, []);
+  // No need to fetch data - using mock data initialized above
+  // useEffect removed since books and categories are already populated with mockBooks and mockCategories
 
   const handlePublicNavigate = (page: PublicPage) => {
     if (page === 'home') setCurrentView('landing');
@@ -118,10 +108,16 @@ export default function App() {
       return;
     }
     try {
-      await api.issueBook(String(memberUser.member_id), String(book.book_id));
+      // Demo mode: Simulate borrowing
       alert(`Successfully borrowed "${book.title}"! Due date: 14 days from today.`);
-      const updated = await api.getBooks();
-      setBooks(updated);
+      
+      // Update available copies locally
+      const updatedBooks = books.map(b => 
+        b.book_id === book.book_id 
+          ? { ...b, available_copies: Math.max(0, b.available_copies - 1) }
+          : b
+      );
+      setBooks(updatedBooks);
     } catch (err: any) {
       alert(err.message || 'Borrow failed');
     }
@@ -133,7 +129,7 @@ export default function App() {
       return;
     }
     try {
-      await api.createReservation(memberUser.member_id, book.book_id);
+      // Demo mode: Simulate reservation
       alert(`Reservation placed for "${book.title}".`);
     } catch (err: any) {
       alert(err.message || 'Reservation failed');
