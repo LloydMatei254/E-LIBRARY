@@ -15,9 +15,23 @@ import {
 export const api = {
   // Dashboard
   async getDashboard(): Promise<DashboardMetrics> {
-    const res = await fetch('/api/dashboard');
-    if (!res.ok) throw new Error('Failed to load dashboard metrics');
-    return res.json();
+    // Demo mode: Return mock dashboard
+    return {
+      total_books: 15,
+      total_members: 8,
+      active_loans: 4,
+      overdue_loans: 1,
+      total_fines_unpaid: 300,
+      total_reservations_pending: 2,
+      borrowing_trends: [
+        { month: 'Jan', count: 12 },
+        { month: 'Feb', count: 18 },
+        { month: 'Mar', count: 15 },
+        { month: 'Apr', count: 22 },
+        { month: 'May', count: 25 },
+        { month: 'Jun', count: 20 }
+      ]
+    };
   },
 
   // Books
