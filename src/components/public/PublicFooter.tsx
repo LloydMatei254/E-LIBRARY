@@ -74,7 +74,6 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({
               <li><button onClick={onOpenMemberAuth} className="hover:text-white transition-colors">Create Patron Account</button></li>
               <li><button onClick={onOpenMemberAuth} className="hover:text-white transition-colors">Member Sign In</button></li>
               <li><button onClick={onOpenAdminAuth} className="hover:text-amber-300 font-semibold transition-colors">Librarian Staff Portal</button></li>
-              <li><button onClick={onOpenDefense} className="hover:text-white transition-colors">CMT210 Defense Matrix</button></li>
             </ul>
           </div>
 
@@ -91,9 +90,8 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-stone-500">
-          <span>© 2026 Page & Pine E-Library. CMT210 Mid-Semester Deliverables. All Rights Reserved.</span>
+          <span>© 2026 Berzowanley Online Library. All Rights Reserved.</span>
           <div className="flex items-center gap-4">
-            <button onClick={onOpenDefense} className="hover:text-white text-amber-400 font-semibold">
               Marking Defense (40 Marks)
             </button>
             <span>·</span>

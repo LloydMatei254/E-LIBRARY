@@ -16,6 +16,7 @@ import { AdminLayout } from './components/admin/AdminLayout';
 import { AdminTab } from './components/admin/AdminSidebar';
 import { Book, Category, Admin, Member } from './types';
 import { api } from './services/api';
+import { mockBooks, mockCategories } from './data/mockBooks';
 import { ShieldAlert, BookOpen, Code2 } from 'lucide-react';
 
 export default function App() {
@@ -35,9 +36,9 @@ export default function App() {
 
   const [adminInitialTab, setAdminInitialTab] = useState<AdminTab>('dashboard');
 
-  // Global books and categories state
-  const [books, setBooks] = useState<Book[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  // Global books and categories state - initialized with mock data for demo
+  const [books, setBooks] = useState<Book[]>(mockBooks);
+  const [categories, setCategories] = useState<Category[]>(mockCategories);
 
   // Search and category filter state shared with Navbar and CatalogueView
   const [searchQuery, setSearchQuery] = useState('');
@@ -311,17 +312,9 @@ export default function App() {
                 <BookOpen className="w-4 h-4 text-blue-500" />
                 <span className="font-semibold text-slate-800">Berzowanley Online Library System</span>
                 <span aria-hidden="true">·</span>
-                <span>CMT210 Object-Oriented Programming (Python 3.10 & SQLite3)</span>
+                <span>Professional Library Management Platform</span>
               </div>
               <div className="flex items-center gap-4">
-                <button
-                  onClick={() => setCurrentView('presentation')}
-                  className="text-amber-700 font-semibold hover:underline flex items-center gap-1"
-                >
-                  <Code2 className="w-3.5 h-3.5" />
-                  <span>Lecturer Marking Defense (40 Marks)</span>
-                </button>
-                <span aria-hidden="true">·</span>
                 <button
                   onClick={() => setCurrentView('landing')}
                   className="hover:text-slate-800"

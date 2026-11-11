@@ -53,9 +53,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [quickEmail, setQuickEmail] = useState('');
   const [previewBook, setPreviewBook] = useState<Book | null>(null);
 
-  // Hero asset paths
-  const heroImgSrc = '/src/assets/images/hero_books_stack_1794386445087.jpg';
-  const bannerImgSrc = '/src/assets/images/banner_reading_cozy_1794386446534.jpg';
+  // Hero asset paths - using Unsplash CDN for reliable hosting
+  const heroImgSrc = 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1200&q=80';
+  const bannerImgSrc = 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80';
 
   const handleQuickRegister = (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,54 +280,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* 3. Trust & Institutional Feature Strip matching image_feee1374.png */}
-      <section className="border-y border-stone-200 bg-white py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center sm:text-left">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center shrink-0 text-stone-700">
-                <BookOpen className="w-5 h-5 text-emerald-800" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">FREE BORROWING</h4>
-                <p className="text-[11px] text-stone-500 mt-0.5">For all verified student patrons</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center shrink-0 text-stone-700">
-                <Clock className="w-5 h-5 text-indigo-800" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">EASY 14-DAY LOANS</h4>
-                <p className="text-[11px] text-stone-500 mt-0.5">Auto-renewal & hold queue</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center shrink-0 text-stone-700">
-                <Code2 className="w-5 h-5 text-amber-800" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">PYTHON OOP BACKEND</h4>
-                <p className="text-[11px] text-stone-500 mt-0.5">10-table SQLite relational engine</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center shrink-0 text-stone-700">
-                <GraduationCap className="w-5 h-5 text-rose-800" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">CMT210 CERTIFIED</h4>
-                <p className="text-[11px] text-stone-500 mt-0.5">Mid-semester defense ready</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. Expanding Cards: Explore Collection Genres */}
+      {/* 3. Expanding Cards: Explore Collection Genres */}
       <section className="py-16 bg-gradient-to-br from-stone-50 via-amber-50/30 to-stone-50 border-b border-stone-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-10">

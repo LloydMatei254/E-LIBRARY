@@ -304,7 +304,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </h3>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed mb-4">
-              An institutional online library management system built for the CMT210 Object-Oriented Programming mid-semester project.
+              A comprehensive online library management system with member portal, catalog search, and administrative tools.
             </p>
             <div className="space-y-2 text-xs bg-slate-50 p-3.5 rounded-lg border border-slate-200">
               <div className="flex justify-between">
