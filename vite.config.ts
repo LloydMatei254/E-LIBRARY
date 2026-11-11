@@ -6,6 +6,16 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     base: '/',
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      emptyOutDir: true,
+      rollupOptions: {
+        output: {
+          manualChunks: undefined,
+        },
+      },
+    },
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
