@@ -1,0 +1,6 @@
+{
+  "name": "Berzowanley Online Library System",
+  "description": "Professional Python Object-Oriented Library Management System with SQLite DBMS, member portal, catalog search, and comprehensive admin management panel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
