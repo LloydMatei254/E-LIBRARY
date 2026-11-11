@@ -4,9 +4,10 @@ import path from 'path';
 import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
-  return { base: '/E-LIBRARY/',
+  return { 
 
-    plugins: [react(), tailwindcss()],
+    base: '/E-LIBRARY/',
+     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
