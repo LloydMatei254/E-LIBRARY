@@ -14,6 +14,7 @@ interface NavbarProps {
   onSearchChange: (query: string) => void;
   onSearchSubmit: () => void;
   onSelectCategory?: (categoryId: number | null) => void;
+  memberPortalCatalogue?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -28,6 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSearchChange,
   onSearchSubmit,
   onSelectCategory,
+  memberPortalCatalogue = false,
 }) => {
   const [activeNavTab, setActiveNavTab] = useState<'home' | 'catalogue' | 'categories' | 'about' | 'contact'>(
     currentView === 'home' ? 'home' : 'catalogue'
@@ -65,78 +67,78 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
-        {/* Top utility row from Deliverable 2 Page 1 wireframe */}
-        <div className="flex items-center justify-between text-xs text-slate-500 pb-2 mb-2 border-b border-slate-100">
-          <span className="font-normal italic text-slate-400 hidden sm:inline-block">
-            online library system
-          </span>
+        {!memberPortalCatalogue && (
+          <div className="flex items-center justify-between text-xs text-slate-500 pb-2 mb-2 border-b border-slate-100">
+            <span className="font-normal italic text-slate-400 hidden sm:inline-block">
+              online library system
+            </span>
 
-          <div className="flex items-center gap-3 ml-auto text-xs">
-            {/* Quick access to the Circulation Desk */}
-            <button
-              onClick={() => onNavigate('issue-return')}
-              className="text-slate-600 hover:text-blue-600 transition-colors hidden md:flex items-center gap-1 font-medium"
-            >
-              <ArrowLeftRight className="w-3.5 h-3.5 text-blue-500" />
-              <span>Issue & Return Desk</span>
-            </button>
+            <div className="flex items-center gap-3 ml-auto text-xs">
+              <button
+                onClick={() => onNavigate('issue-return')}
+                className="text-slate-600 hover:text-blue-600 transition-colors hidden md:flex items-center gap-1 font-medium"
+              >
+                <ArrowLeftRight className="w-3.5 h-3.5 text-blue-500" />
+                <span>Issue & Return Desk</span>
+              </button>
 
-            {adminUser ? (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-                <button
-                  onClick={() => onNavigate('admin')}
-                  className="font-semibold text-slate-800 hover:text-blue-600 flex items-center gap-1"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Admin: {adminUser.full_name}</span>
-                </button>
-                <button
-                  onClick={onLogout}
-                  className="px-2 py-0.5 rounded text-slate-600 hover:bg-slate-100 transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
-            ) : memberUser ? (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-                <button
-                  onClick={() => onNavigate('member-portal')}
-                  className="font-semibold text-slate-800 hover:text-blue-600 flex items-center gap-1"
-                >
-                  <User className="w-3.5 h-3.5 text-blue-500" />
-                  <span>{memberUser.full_name}</span>
-                </button>
-                <button
-                  onClick={onLogout}
-                  className="px-2 py-0.5 rounded text-slate-600 hover:bg-slate-100 transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={onOpenMemberAuth}
-                  className="px-2.5 py-1 text-slate-700 hover:text-blue-600 font-medium transition-colors border border-slate-200 rounded hover:bg-slate-50"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={onOpenMemberAuth}
-                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors shadow-2xs"
-                >
-                  Register
-                </button>
-                <button
-                  onClick={onOpenAdminAuth}
-                  className="px-2.5 py-1 text-slate-700 hover:text-slate-900 border border-slate-200 rounded hover:bg-slate-50 text-[11px]"
-                >
-                  Staff
-                </button>
-              </div>
-            )}
+              {adminUser ? (
+                <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+                  <button
+                    onClick={() => onNavigate('admin')}
+                    className="font-semibold text-slate-800 hover:text-blue-600 flex items-center gap-1"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Admin: {adminUser.full_name}</span>
+                  </button>
+                  <button
+                    onClick={onLogout}
+                    className="px-2 py-0.5 rounded text-slate-600 hover:bg-slate-100 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : memberUser ? (
+                <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+                  <button
+                    onClick={() => onNavigate('member-portal')}
+                    className="font-semibold text-slate-800 hover:text-blue-600 flex items-center gap-1"
+                  >
+                    <User className="w-3.5 h-3.5 text-blue-500" />
+                    <span>{memberUser.full_name}</span>
+                  </button>
+                  <button
+                    onClick={onLogout}
+                    className="px-2 py-0.5 rounded text-slate-600 hover:bg-slate-100 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={onOpenMemberAuth}
+                    className="px-2.5 py-1 text-slate-700 hover:text-blue-600 font-medium transition-colors border border-slate-200 rounded hover:bg-slate-50"
+                  >
+                    Login
+                  </button>
+                  <button
+                    onClick={onOpenMemberAuth}
+                    className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors shadow-2xs"
+                  >
+                    Register
+                  </button>
+                  <button
+                    onClick={onOpenAdminAuth}
+                    className="px-2.5 py-1 text-slate-700 hover:text-slate-900 border border-slate-200 rounded hover:bg-slate-50 text-[11px]"
+                  >
+                    Staff
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Exact Header Bar matching image_81093cb3.png */}
         <div className="flex items-center justify-between gap-6 py-1">
@@ -156,16 +158,18 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right Nav Links: Home  Catalogue  Categories  About  Contact */}
           <nav className="flex items-center gap-6 sm:gap-8 text-sm">
-            <button
-              onClick={() => handleNavClick('home')}
-              className={`transition-colors whitespace-nowrap shrink-0 pb-1 ${
-                activeNavTab === 'home' && currentView === 'home'
-                  ? 'text-blue-500 font-semibold border-b-2 border-blue-500'
-                  : 'text-slate-700 hover:text-blue-600 font-medium'
-              }`}
-            >
-              Home
-            </button>
+            {!memberPortalCatalogue && (
+              <button
+                onClick={() => handleNavClick('home')}
+                className={`transition-colors whitespace-nowrap shrink-0 pb-1 ${
+                  activeNavTab === 'home' && currentView === 'home'
+                    ? 'text-blue-500 font-semibold border-b-2 border-blue-500'
+                    : 'text-slate-700 hover:text-blue-600 font-medium'
+                }`}
+              >
+                Home
+              </button>
+            )}
 
             <button
               onClick={() => handleNavClick('catalogue')}

@@ -17,7 +17,7 @@ import { AdminTab } from './components/admin/AdminSidebar';
 import { Book, Category, Admin, Member } from './types';
 import { api } from './services/api';
 import { mockBooks, mockCategories } from './data/mockBooks';
-import { ShieldAlert, BookOpen, Code2 } from 'lucide-react';
+import { ArrowLeft, ShieldAlert, BookOpen, Code2 } from 'lucide-react';
 
 export default function App() {
   // Public pages ('landing', 'public-catalogue', 'public-categories', 'public-bestsellers')
@@ -35,6 +35,7 @@ export default function App() {
   >('landing');
 
   const [adminInitialTab, setAdminInitialTab] = useState<AdminTab>('dashboard');
+  const [returnToMemberPortal, setReturnToMemberPortal] = useState(false);
 
   // Global books and categories state - initialized with mock data for demo
   const [books, setBooks] = useState<Book[]>(mockBooks);
@@ -57,13 +58,24 @@ export default function App() {
   // useEffect removed since books and categories are already populated with mockBooks and mockCategories
 
   const handlePublicNavigate = (page: PublicPage) => {
+    setReturnToMemberPortal(false);
     if (page === 'home') setCurrentView('landing');
     else if (page === 'catalogue') setCurrentView('public-catalogue');
     else if (page === 'categories') setCurrentView('public-categories');
     else if (page === 'bestsellers') setCurrentView('public-bestsellers');
   };
 
+  const openMemberPortal = () => {
+    if (memberUser) {
+      setReturnToMemberPortal(false);
+      setCurrentView('member-portal');
+    } else {
+      setIsMemberAuthOpen(true);
+    }
+  };
+
   const handleLogout = () => {
+    setReturnToMemberPortal(false);
     if (currentView === 'admin') {
       setAdminUser(null);
       setCurrentView('landing');
@@ -74,8 +86,13 @@ export default function App() {
   };
 
   const handleNavigate = (view: any) => {
+    if (view !== 'catalogue' && view !== 'member-portal') {
+      setReturnToMemberPortal(false);
+    }
     if (view === 'home' || view === 'landing') {
       setCurrentView('landing');
+    } else if (view === 'member-portal') {
+      openMemberPortal();
     } else if (view === 'admin-dashboard' || view === 'admin') {
       if (adminUser) {
         setAdminInitialTab('dashboard');
@@ -205,7 +222,7 @@ export default function App() {
           onOpenMemberAuth={() => setIsMemberAuthOpen(true)}
           onOpenAdminAuth={() => setIsAdminAuthOpen(true)}
           onOpenDefense={() => setCurrentView('presentation')}
-          onGoToMemberPortal={() => setCurrentView('member-portal')}
+          onGoToMemberPortal={openMemberPortal}
           onGoToAdminPanel={() => setCurrentView('admin')}
           books={books}
           categories={categories}
@@ -222,7 +239,7 @@ export default function App() {
           onOpenMemberAuth={() => setIsMemberAuthOpen(true)}
           onOpenAdminAuth={() => setIsAdminAuthOpen(true)}
           onOpenDefense={() => setCurrentView('presentation')}
-          onGoToMemberPortal={() => setCurrentView('member-portal')}
+          onGoToMemberPortal={openMemberPortal}
           onGoToAdminPanel={() => setCurrentView('admin')}
         />
       ) : currentView === 'public-categories' ? (
@@ -235,7 +252,7 @@ export default function App() {
           onOpenMemberAuth={() => setIsMemberAuthOpen(true)}
           onOpenAdminAuth={() => setIsAdminAuthOpen(true)}
           onOpenDefense={() => setCurrentView('presentation')}
-          onGoToMemberPortal={() => setCurrentView('member-portal')}
+          onGoToMemberPortal={openMemberPortal}
           onGoToAdminPanel={() => setCurrentView('admin')}
         />
       ) : currentView === 'public-bestsellers' ? (
@@ -248,31 +265,48 @@ export default function App() {
           onOpenMemberAuth={() => setIsMemberAuthOpen(true)}
           onOpenAdminAuth={() => setIsAdminAuthOpen(true)}
           onOpenDefense={() => setCurrentView('presentation')}
-          onGoToMemberPortal={() => setCurrentView('member-portal')}
+          onGoToMemberPortal={openMemberPortal}
           onGoToAdminPanel={() => setCurrentView('admin')}
         />
       ) : (
         <>
-          {/* Top 3-Zone Navigation Header for Internal Views */}
-          <Navbar
-            currentView={currentView}
-            onNavigate={handleNavigate}
-            adminUser={adminUser}
-            memberUser={memberUser}
-            onOpenMemberAuth={() => setIsMemberAuthOpen(true)}
-            onOpenAdminAuth={() => setIsAdminAuthOpen(true)}
-            onLogout={handleLogout}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onSearchSubmit={() => setCurrentView('catalogue')}
-            onSelectCategory={(catId) => {
-              setSelectedCategory(catId);
-              setCurrentView('catalogue');
-            }}
-          />
+          {currentView !== 'member-portal' && (
+            <Navbar
+              currentView={currentView}
+              onNavigate={handleNavigate}
+              adminUser={adminUser}
+              memberUser={memberUser}
+              onOpenMemberAuth={() => setIsMemberAuthOpen(true)}
+              onOpenAdminAuth={() => setIsAdminAuthOpen(true)}
+              onLogout={handleLogout}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onSearchSubmit={() => setCurrentView('catalogue')}
+              onSelectCategory={(catId) => {
+                setSelectedCategory(catId);
+                setCurrentView('catalogue');
+              }}
+              memberPortalCatalogue={currentView === 'catalogue' && returnToMemberPortal}
+            />
+          )}
 
           {/* Main Content Body */}
           <main className="flex-1">
+            {currentView === 'catalogue' && returnToMemberPortal && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReturnToMemberPortal(false);
+                    setCurrentView('member-portal');
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:text-emerald-800"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to member overview
+                </button>
+              </div>
+            )}
             {currentView === 'catalogue' && (
               <CatalogueView
                 currentMember={memberUser}
@@ -292,7 +326,11 @@ export default function App() {
             {currentView === 'member-portal' && memberUser && (
               <MemberPortal
                 member={memberUser}
-                onNavigateToCatalog={() => setCurrentView('catalogue')}
+                onNavigateToCatalog={() => {
+                  setReturnToMemberPortal(true);
+                  setCurrentView('catalogue');
+                }}
+                onLogout={handleLogout}
               />
             )}
 
@@ -301,25 +339,26 @@ export default function App() {
             )}
           </main>
 
-          {/* Footer for Internal Views */}
-          <footer className="bg-white border-t border-slate-200 py-6 text-xs text-slate-500">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-blue-500" />
-                <span className="font-semibold text-slate-800">Berzowanley Online Library System</span>
-                <span aria-hidden="true">·</span>
-                <span>Professional Library Management Platform</span>
+          {currentView !== 'member-portal' && (
+            <footer className="bg-white border-t border-slate-200 py-6 text-xs text-slate-500">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-blue-500" />
+                  <span className="font-semibold text-slate-800">Berzowanley Online Library System</span>
+                  <span aria-hidden="true">·</span>
+                  <span>Professional Library Management Platform</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setCurrentView('landing')}
+                    className="hover:text-slate-800"
+                  >
+                    Return to Landing Page
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => setCurrentView('landing')}
-                  className="hover:text-slate-800"
-                >
-                  Return to Landing Page
-                </button>
-              </div>
-            </div>
-          </footer>
+            </footer>
+          )}
         </>
       )}
 
@@ -329,7 +368,8 @@ export default function App() {
         onClose={() => setIsMemberAuthOpen(false)}
         onSuccess={(member) => {
           setMemberUser(member);
-          setCurrentView('catalogue');
+          setReturnToMemberPortal(false);
+          setCurrentView('member-portal');
         }}
       />
 
