@@ -57,7 +57,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
       });
       setBooks(data);
     } catch (err: any) {
-      setError(err.message || 'Error fetching books from Python database');
+      setError(err.message || 'Error fetching books from the library database.');
     } finally {
       setLoading(false);
     }

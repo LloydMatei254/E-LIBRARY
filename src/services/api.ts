@@ -12,14 +12,15 @@ import {
   OOPTestReport,
 } from '../types';
 import { handleMockApiRequest } from './mockApi';
+import { isDemoMode, isSupabaseConfigured } from './supabaseClient';
+import { supabaseApi } from './supabaseApi';
 
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE !== 'false';
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
-const apiFetch = (path: string, init?: RequestInit) => DEMO_MODE
+const apiFetch = (path: string, init?: RequestInit) => isDemoMode
   ? handleMockApiRequest(path, init)
   : fetch(`${API_BASE_URL}${path}`, init);
 
-export const api = {
+const mockApi = {
   // Dashboard
   async getDashboard(): Promise<DashboardMetrics> {
     const res = await apiFetch('/api/dashboard');
@@ -64,6 +65,10 @@ export const api = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to update book');
     return data.book;
+  },
+
+  async uploadBookCover(_file: File, _categoryId: number): Promise<string> {
+    throw new Error('Cover uploads are available when Supabase is enabled.');
   },
 
   async deleteBook(id: number): Promise<boolean> {
@@ -294,4 +299,37 @@ export const api = {
     if (!res.ok) throw new Error('Failed to fetch code bundle');
     return res.json();
   },
+
+  async getCurrentAccount(): Promise<{ member: Member | null; admin: Admin | null }> {
+    return { member: null, admin: null };
+  },
+
+  async signOut(): Promise<void> {},
+
+  async sendPasswordReset(_email: string): Promise<void> {
+    throw new Error('Password reset is available when Supabase authentication is enabled.');
+  },
+
+  async updatePassword(_password: string): Promise<void> {
+    throw new Error('Password reset is available when Supabase authentication is enabled.');
+  },
+
+  subscribeToMemberUpdates(): () => void {
+    return () => {};
+  },
 };
+
+export const api = new Proxy(mockApi as typeof mockApi & typeof supabaseApi, {
+  get(target, property, receiver) {
+    const implementationSource = isDemoMode ? mockApi : supabaseApi;
+    const implementation = Reflect.get(implementationSource, property);
+    if (typeof implementation !== 'function') return Reflect.get(target, property, receiver);
+
+    return (...args: unknown[]) => {
+      if (!isDemoMode && !isSupabaseConfigured) {
+        throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY before using live mode.');
+      }
+      return Reflect.apply(implementation, implementationSource, args);
+    };
+  },
+});

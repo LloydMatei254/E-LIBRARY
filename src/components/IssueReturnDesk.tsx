@@ -260,7 +260,7 @@ export const IssueReturnDesk: React.FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="text-center py-8 text-slate-400">
-                    Loading loans from SQLite DBMS...
+                    Loading active loans...
                   </td>
                 </tr>
               ) : activeLoans.length === 0 ? (

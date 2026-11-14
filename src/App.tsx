@@ -18,6 +18,26 @@ import { Book, Category, Admin, Member } from './types';
 import { api } from './services/api';
 import { mockBooks, mockCategories } from './data/mockBooks';
 import { ArrowLeft, ShieldAlert, BookOpen, Code2 } from 'lucide-react';
+import { getSupabaseClient, isDemoMode, isSupabaseConfigured } from './services/supabaseClient';
+
+const OfflineFallbackNotice = () => {
+  const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    const handleFallbackChange = (event: Event) => {
+      if (event instanceof CustomEvent) setActive(event.detail === true);
+    };
+    window.addEventListener('library:offline-fallback', handleFallbackChange);
+    return () => window.removeEventListener('library:offline-fallback', handleFallbackChange);
+  }, []);
+
+  if (!active) return null;
+  return (
+    <div role="status" className="sticky top-0 z-[60] bg-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-900">
+      You are viewing saved or demo data. Borrowing, reservations, and staff changes need an internet connection.
+    </div>
+  );
+};
 
 export default function App() {
   // Public pages ('landing', 'public-catalogue', 'public-categories', 'public-bestsellers')
@@ -48,14 +68,52 @@ export default function App() {
   // Authenticated states (initially null or patrons can log in / sign up)
   const [adminUser, setAdminUser] = useState<Admin | null>(null);
   const [memberUser, setMemberUser] = useState<Member | null>(null);
+  const [startupError, setStartupError] = useState<string | null>(null);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   // Modals
   const [isMemberAuthOpen, setIsMemberAuthOpen] = useState(false);
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
   const [selectedBookForDetails, setSelectedBookForDetails] = useState<Book | null>(null);
 
-  // No need to fetch data - using mock data initialized above
-  // useEffect removed since books and categories are already populated with mockBooks and mockCategories
+  useEffect(() => {
+    if (isDemoMode || !isSupabaseConfigured) return;
+    const { data: { subscription } } = getSupabaseClient().auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+        setIsMemberAuthOpen(true);
+      }
+    });
+    if (window.location.hash.includes('type=recovery')) {
+      setIsPasswordRecovery(true);
+      setIsMemberAuthOpen(true);
+    }
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (isDemoMode) return;
+    let active = true;
+    Promise.all([api.getBooks(), api.getCategories(), api.getCurrentAccount()])
+      .then(([liveBooks, liveCategories, account]) => {
+        if (!active) return;
+        setBooks(liveBooks);
+        setCategories(liveCategories);
+        setMemberUser(account.member);
+        setAdminUser(account.admin);
+        if (account.member) setCurrentView('member-portal');
+        if (account.admin) setCurrentView('admin');
+      })
+      .catch((error: unknown) => {
+        console.error('Could not initialize the live library connection.', error);
+        if (active) {
+          setStartupError(error instanceof Error ? error.message : 'The live library could not be initialized.');
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handlePublicNavigate = (page: PublicPage) => {
     setReturnToMemberPortal(false);
@@ -74,7 +132,14 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await api.signOut();
+    } catch (error) {
+      console.error('Could not sign out of the library account.', error);
+      alert(error instanceof Error ? error.message : 'Sign out failed.');
+      return;
+    }
     setReturnToMemberPortal(false);
     if (currentView === 'admin') {
       setAdminUser(null);
@@ -125,18 +190,16 @@ export default function App() {
       return;
     }
     try {
-      // Demo mode: Simulate borrowing
-      alert(`Successfully borrowed "${book.title}"! Due date: 14 days from today.`);
+      const result = await api.issueBook(String(memberUser.member_id), String(book.book_id));
+      alert(`Successfully borrowed "${book.title}"! Due date: ${String(result.due_date ?? '14 days from today')}.`);
       
-      // Update available copies locally
-      const updatedBooks = books.map(b => 
-        b.book_id === book.book_id 
-          ? { ...b, available_copies: Math.max(0, b.available_copies - 1) }
-          : b
-      );
-      setBooks(updatedBooks);
-    } catch (err: any) {
-      alert(err.message || 'Borrow failed');
+      setBooks((currentBooks) => currentBooks.map((currentBook) =>
+        currentBook.book_id === book.book_id
+          ? { ...currentBook, available_copies: Math.max(0, currentBook.available_copies - 1) }
+          : currentBook,
+      ));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Borrow failed.');
     }
   };
 
@@ -146,10 +209,10 @@ export default function App() {
       return;
     }
     try {
-      // Demo mode: Simulate reservation
+      await api.createReservation(memberUser.member_id, book.book_id);
       alert(`Reservation placed for "${book.title}".`);
-    } catch (err: any) {
-      alert(err.message || 'Reservation failed');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Reservation failed.');
     }
   };
 
@@ -158,6 +221,7 @@ export default function App() {
     if (!adminUser) {
       return (
         <div className="min-h-screen bg-slate-900 flex flex-col font-sans">
+          <OfflineFallbackNotice />
           <Navbar
             currentView="admin"
             onNavigate={handleNavigate}
@@ -203,18 +267,27 @@ export default function App() {
     }
 
     return (
-      <AdminLayout
-        adminUser={adminUser}
-        initialTab={adminInitialTab}
-        onLogout={handleLogout}
-        onExitToCatalogue={() => setCurrentView('catalogue')}
-        onOpenDefense={() => setCurrentView('presentation')}
-      />
+      <>
+        <OfflineFallbackNotice />
+        <AdminLayout
+          adminUser={adminUser}
+          initialTab={adminInitialTab}
+          onLogout={handleLogout}
+          onExitToCatalogue={() => setCurrentView('catalogue')}
+          onOpenDefense={() => setCurrentView('presentation')}
+        />
+      </>
     );
   }
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-slate-900 flex flex-col font-sans">
+      <OfflineFallbackNotice />
+      {startupError && (
+        <div role="alert" className="border-b border-rose-200 bg-rose-50 px-4 py-2 text-center text-xs text-rose-800">
+          Live library connection unavailable: {startupError}
+        </div>
+      )}
       {/* 1. Public Pages (Zero forced auth - visitors browse freely) */}
       {currentView === 'landing' ? (
         <LandingPage
@@ -366,6 +439,12 @@ export default function App() {
       <MemberAuthModal
         isOpen={isMemberAuthOpen}
         onClose={() => setIsMemberAuthOpen(false)}
+        isPasswordRecovery={isPasswordRecovery}
+        onPasswordResetComplete={() => {
+          setIsPasswordRecovery(false);
+          setMemberUser(null);
+          setCurrentView('landing');
+        }}
         onSuccess={(member) => {
           setMemberUser(member);
           setReturnToMemberPortal(false);

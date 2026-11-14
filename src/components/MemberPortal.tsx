@@ -96,7 +96,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
     setLoadError(null);
     try {
       const [allLoans, memberFines, memberReservations] = await Promise.all([
-        api.getActiveLoans(),
+        api.getActiveLoans(member.member_id),
         api.getFines(member.member_id),
         api.getReservations(member.member_id),
       ]);
@@ -112,22 +112,16 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
   };
 
   useEffect(() => {
-    loadData();
+    let active = true;
+    void loadData();
+    const unsubscribe = api.subscribeToMemberUpdates(member.member_id, () => {
+      if (active) void loadData();
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [member.member_id]);
-
-  const handlePayFine = async (fineId: number) => {
-    try {
-      await api.payFine(fineId);
-      setFeedback({ message: 'Fine payment successfully processed.' });
-      await loadData();
-    } catch (error) {
-      console.error('Could not process fine payment.', error);
-      setFeedback({
-        message: error instanceof Error ? error.message : 'Payment could not be processed. Please try again.',
-        error: true,
-      });
-    }
-  };
 
   const handleSavePreferences = (event: React.FormEvent) => {
     event.preventDefault();
@@ -247,9 +241,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
       <div className="flex items-center justify-between gap-3 sm:justify-end">
         <span className="font-semibold tabular-nums text-slate-900">KES {fine.amount.toFixed(2)}</span>
         {fine.status === 'unpaid' ? (
-          <button type="button" onClick={() => handlePayFine(fine.fine_id)} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-800">
-            Pay fine
-          </button>
+          statusPill('Pay at library desk', 'amber')
         ) : statusPill('Paid', 'green')}
       </div>
     </div>
@@ -381,12 +373,12 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-medium text-slate-500">Amount due</p>
           <p className={`mt-2 text-2xl font-bold ${unpaidFinesTotal > 0 ? 'text-rose-600' : 'text-slate-900'}`}>KES {unpaidFinesTotal.toFixed(2)}</p>
-          <p className="mt-2 text-xs text-slate-400">{fines.filter((fine) => fine.status === 'unpaid').length} unpaid {fines.filter((fine) => fine.status === 'unpaid').length === 1 ? 'fine' : 'fines'}</p>
+          <p className="mt-2 text-xs text-slate-400">{unpaidFinesTotal > 0 ? 'Payment is recorded by library staff.' : 'Your account has no outstanding fines.'}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-medium text-slate-500">Payment status</p>
           <div className="mt-3">{unpaidFinesTotal > 0 ? statusPill('Action required', 'amber') : statusPill('All clear', 'green')}</div>
-          <p className="mt-2 text-xs text-slate-400">Paid fines remain visible in your history.</p>
+          <p className="mt-2 text-xs text-slate-400">Please visit the library desk to pay an outstanding fine.</p>
         </div>
       </div>
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

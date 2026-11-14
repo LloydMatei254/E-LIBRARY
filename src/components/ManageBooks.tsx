@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, X, AlertCircle, CheckCircle2, BookOpen } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, AlertCircle, CheckCircle2, BookOpen, Upload, Download } from 'lucide-react';
 import { Book, Category } from '../types';
 import { api } from '../services/api';
+import { isDemoMode } from '../services/supabaseClient';
+import { mockBooks } from '../data/mockBooks';
 
 export const ManageBooks: React.FC = () => {
   const [books, setBooks] = useState<Book[]>([]);
@@ -29,6 +31,18 @@ export const ManageBooks: React.FC = () => {
   const [formShelfLocation, setFormShelfLocation] = useState('Shelf A-12');
   const [formDescription, setFormDescription] = useState('');
   const [formCoverImage, setFormCoverImage] = useState('');
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState('');
+  const [uploadedCover, setUploadedCover] = useState<{ file: File; categoryId: number; url: string } | null>(null);
+  const [savingBook, setSavingBook] = useState(false);
+  const [importingDemoCovers, setImportingDemoCovers] = useState(false);
+  const [demoCoverProgress, setDemoCoverProgress] = useState<{ completed: number; total: number } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+    };
+  }, [coverPreviewUrl]);
 
   const loadData = async () => {
     setLoading(true);
@@ -77,6 +91,9 @@ export const ManageBooks: React.FC = () => {
     setFormShelfLocation('Shelf A-12');
     setFormDescription('');
     setFormCoverImage('');
+    setCoverFile(null);
+    setCoverPreviewUrl('');
+    setUploadedCover(null);
     setIsModalOpen(true);
   };
 
@@ -94,13 +111,49 @@ export const ManageBooks: React.FC = () => {
     setFormShelfLocation(book.shelf_location || '');
     setFormDescription(book.description || '');
     setFormCoverImage(book.cover_image || '');
+    setCoverFile(null);
+    setCoverPreviewUrl('');
+    setUploadedCover(null);
     setIsModalOpen(true);
+  };
+
+  const handleCoverFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0] ?? null;
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Choose a JPEG, PNG, or WebP image.');
+      event.currentTarget.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Cover images must be 5 MB or smaller.');
+      event.currentTarget.value = '';
+      return;
+    }
+
+    setError(null);
+    setCoverFile(file);
+    setCoverPreviewUrl(URL.createObjectURL(file));
+    setUploadedCover(null);
   };
 
   const handleSaveBook = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSavingBook(true);
     try {
+      let coverImage = formCoverImage;
+      if (coverFile) {
+        const categoryId = Number(formCategoryId);
+        const uploadedUrl = uploadedCover?.file === coverFile && uploadedCover.categoryId === categoryId
+          ? uploadedCover.url
+          : await api.uploadBookCover(coverFile, categoryId);
+        coverImage = uploadedUrl;
+        setFormCoverImage(uploadedUrl);
+        setUploadedCover({ file: coverFile, categoryId, url: uploadedUrl });
+      }
+
       const payload = {
         title: formTitle,
         isbn: formIsbn,
@@ -113,7 +166,7 @@ export const ManageBooks: React.FC = () => {
         total_copies: Number(formTotalCopies),
         shelf_location: formShelfLocation,
         description: formDescription,
-        cover_image: formCoverImage,
+        cover_image: coverImage,
       };
 
       if (editingBook) {
@@ -121,13 +174,109 @@ export const ManageBooks: React.FC = () => {
         notify(`Updated book "${formTitle}" successfully.`);
       } else {
         await api.addBook(payload);
-        notify(`New book "${formTitle}" added to Python SQLite database.`);
+        notify(`New book "${formTitle}" added to the library catalogue.`);
       }
 
       setIsModalOpen(false);
+      setCoverFile(null);
+      setCoverPreviewUrl('');
+      setUploadedCover(null);
       loadData();
     } catch (err: any) {
       setError(err.message || 'Operation failed');
+    } finally {
+      setSavingBook(false);
+    }
+  };
+
+  const handleImportDemoCovers = async () => {
+    const demoCovers = mockBooks.filter((book) => book.cover_image?.trim());
+    if (!confirm(`Import ${demoCovers.length} demo covers into Supabase Storage for matching books?`)) return;
+
+    setError(null);
+    setImportingDemoCovers(true);
+    setDemoCoverProgress({ completed: 0, total: demoCovers.length });
+    let imported = 0;
+    let skipped = 0;
+    let missingCatalogueEntries = 0;
+    let alreadyStored = 0;
+    let preservedCustomCovers = 0;
+    const failures: string[] = [];
+    const normalize = (value: string) => value.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+
+    try {
+      const [liveBooks, liveCategories] = await Promise.all([api.getBooks(), api.getCategories()]);
+
+      for (const demoBook of demoCovers) {
+        try {
+          const sourceUrl = demoBook.cover_image?.trim();
+          if (!sourceUrl) throw new Error('Demo cover URL is missing.');
+
+          const liveBook = liveBooks.find((book) => normalize(book.title) === normalize(demoBook.title));
+          const liveCategory = liveCategories.find(
+            (category) => normalize(category.category_name) === normalize(demoBook.category_name ?? ''),
+          );
+          if (!liveBook || !liveCategory) {
+            skipped += 1;
+            missingCatalogueEntries += 1;
+            continue;
+          }
+
+          if (liveBook.cover_image?.includes('/storage/v1/object/public/book-covers/')) {
+            skipped += 1;
+            alreadyStored += 1;
+            continue;
+          }
+          if (liveBook.cover_image && liveBook.cover_image !== sourceUrl) {
+            skipped += 1;
+            preservedCustomCovers += 1;
+            continue;
+          }
+
+          const response = await fetch(sourceUrl);
+          if (!response.ok) throw new Error(`Cover download failed (${response.status}).`);
+          const blob = await response.blob();
+          const contentType = blob.type.split(';')[0].toLocaleLowerCase();
+          const extensionByType: Record<string, string> = {
+            'image/jpeg': 'jpg',
+            'image/png': 'png',
+            'image/webp': 'webp',
+          };
+          const extension = extensionByType[contentType];
+          if (!extension) throw new Error('The source did not return a supported image format.');
+
+          const file = new File([blob], `${demoBook.book_id}.${extension}`, { type: contentType });
+          const coverUrl = await api.uploadBookCover(file, liveCategory.category_id);
+          await api.updateBook(liveBook.book_id, { ...liveBook, cover_image: coverUrl });
+          imported += 1;
+        } catch (err) {
+          failures.push(`${demoBook.title}: ${err instanceof Error ? err.message : 'Import failed.'}`);
+        } finally {
+          setDemoCoverProgress((progress) => progress
+            ? { ...progress, completed: progress.completed + 1 }
+            : progress);
+        }
+      }
+
+      loadData();
+      if (failures.length > 0) {
+        const details = failures.slice(0, 3).join(' ');
+        const remaining = failures.length > 3 ? ` Plus ${failures.length - 3} more.` : '';
+        setError(`Imported ${imported}; skipped ${skipped}; failed ${failures.length}. ${details}${remaining}`);
+      } else {
+        const summary = [
+          `Imported ${imported} of ${demoCovers.length} demo covers.`,
+          missingCatalogueEntries ? `${missingCatalogueEntries} skipped because the matching live book or category is missing.` : '',
+          alreadyStored ? `${alreadyStored} already use Storage covers.` : '',
+          preservedCustomCovers ? `${preservedCustomCovers} custom covers were left unchanged.` : '',
+        ].filter(Boolean).join(' ');
+        notify(summary);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not import demo covers.');
+    } finally {
+      setImportingDemoCovers(false);
+      setDemoCoverProgress(null);
     }
   };
 
@@ -159,17 +308,33 @@ export const ManageBooks: React.FC = () => {
             Manage Books
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Deliverable 2 Section 3.3 · Complete Catalog CRUD connected to SQLite
+            Deliverable 2 Section 3.3 · Complete catalogue management
           </p>
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-xs"
-        >
-          <Plus className="w-4 h-4" />
-          <span>+ Add New Book</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {!isDemoMode && (
+            <button
+              onClick={handleImportDemoCovers}
+              disabled={importingDemoCovers}
+              className="px-3.5 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-60"
+            >
+              <Download className="w-4 h-4" />
+              <span>
+                {importingDemoCovers && demoCoverProgress
+                  ? `Importing ${demoCoverProgress.completed}/${demoCoverProgress.total}...`
+                  : 'Import demo covers'}
+              </span>
+            </button>
+          )}
+          <button
+            onClick={openAddModal}
+            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Add New Book</span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -241,7 +406,7 @@ export const ManageBooks: React.FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="text-center py-8 text-slate-400">
-                    Loading books from Python SQLite database...
+                    Loading books from the catalogue...
                   </td>
                 </tr>
               ) : books.length === 0 ? (
@@ -318,6 +483,7 @@ export const ManageBooks: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
           <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-3xl w-full p-6 relative max-h-[90vh] overflow-y-auto">
             <button
+              disabled={savingBook}
               onClick={() => setIsModalOpen(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-md"
             >
@@ -496,10 +662,60 @@ export const ManageBooks: React.FC = () => {
                 />
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    Cover image
+                  </label>
+                  {!isDemoMode && (
+                    <>
+                      <label className="flex items-center justify-center gap-2 w-full px-3 py-2 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-100">
+                        <Upload className="w-4 h-4" />
+                        {coverFile ? 'Choose a different image' : 'Choose image to upload'}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={handleCoverFileChange}
+                          className="sr-only"
+                        />
+                      </label>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        JPEG, PNG, or WebP; up to 5 MB. Maximum 50 images per category.
+                      </p>
+                    </>
+                  )}
+                  {(coverPreviewUrl || formCoverImage) && (
+                    <img
+                      src={coverPreviewUrl || formCoverImage}
+                      alt="Book cover preview"
+                      className="mt-2 h-32 w-24 rounded-md border border-slate-200 object-cover"
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    Cover image URL
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={formCoverImage}
+                    onChange={(e) => {
+                      setFormCoverImage(e.target.value);
+                      setCoverFile(null);
+                      setCoverPreviewUrl('');
+                      setUploadedCover(null);
+                    }}
+                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
               {/* Action Buttons matching wireframe */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
+                  disabled={savingBook}
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
                 >
@@ -507,9 +723,12 @@ export const ManageBooks: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-xs"
+                  disabled={savingBook}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-xs disabled:opacity-60"
                 >
-                  Save Book
+                  {savingBook
+                    ? coverFile && uploadedCover?.file !== coverFile ? 'Uploading cover...' : 'Saving book...'
+                    : 'Save Book'}
                 </button>
               </div>
             </form>

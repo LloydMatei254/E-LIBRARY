@@ -69,7 +69,7 @@ export const ManageMembers: React.FC = () => {
         email: newEmail,
         phone: newPhone,
       });
-      notify(`Member ${created.full_name} registered successfully.`);
+      notify(`Member profile created for ${created.full_name}. They can register with ${created.email}.`);
       setIsAddModalOpen(false);
       setNewName('');
       setNewEmail('');
@@ -175,7 +175,7 @@ export const ManageMembers: React.FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="text-center py-8 text-slate-400">
-                    Loading members from Python SQLite database...
+                    Loading member records...
                   </td>
                 </tr>
               ) : members.length === 0 ? (

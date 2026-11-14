@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, ShieldAlert, ArrowRight, AlertCircle, KeyRound } from 'lucide-react';
 import { Admin } from '../types';
 import { api } from '../services/api';
+import { isDemoMode } from '../services/supabaseClient';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -10,8 +11,8 @@ interface AdminLoginModalProps {
 }
 
 export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose, onSuccess }) => {
-  const [email, setEmail] = useState('admin@library.ac.ke');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState(isDemoMode ? 'admin@library.ac.ke' : '');
+  const [password, setPassword] = useState(isDemoMode ? 'admin123' : '');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -22,22 +23,12 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
     setError(null);
     setLoading(true);
     
-    // Demo mode: Mock admin authentication
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const mockAdmin: Admin = {
-        admin_id: 1,
-        full_name: 'J. Mwangi',
-        email: email,
-        role: 'super_admin',
-        created_at: new Date().toISOString()
-      };
-      
-      onSuccess(mockAdmin);
+      const admin = await api.loginAdmin(email, password);
+      onSuccess(admin);
       onClose();
     } catch (err: any) {
-      setError('Demo mode: Admin access granted!');
+      setError(err.message || 'Staff sign-in failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -113,7 +104,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
             <span>{loading ? 'Authenticating...' : '-> sign in'}</span>
           </button>
 
-          <div className="pt-2 text-center">
+          {isDemoMode && <div className="pt-2 text-center">
             <button
               type="button"
               onClick={() => {
@@ -125,7 +116,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
               <KeyRound className="w-3 h-3" />
               <span>Fill Admin J. Mwangi Credentials</span>
             </button>
-          </div>
+          </div>}
         </form>
 
         <div className="mt-8 pt-4 border-t border-slate-100 text-center">

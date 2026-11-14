@@ -1,7 +1,53 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Users, Clock, AlertTriangle, ArrowUpRight, CheckCircle2, TrendingUp } from 'lucide-react';
+import { BookOpen, Users, Clock, AlertTriangle, ArrowUpRight, CheckCircle2, TrendingUp, Database } from 'lucide-react';
 import { DashboardMetrics, Admin } from '../types';
 import { api } from '../services/api';
+
+const schemaTables = [
+  {
+    name: 'admins',
+    storage: 'Logical staff records · public.profiles',
+    fields: [
+      ['admin_id', 'bigint', 'PK · identity (member_id)'],
+      ['full_name', 'text', 'NOT NULL'],
+      ['email', 'text', 'NOT NULL · UNIQUE'],
+      ['role', 'text', 'NOT NULL · librarian or super_admin'],
+      ['password_hash', '—', 'Handled by Supabase Auth; not in the library table'],
+      ['created_at', 'timestamptz', 'Maps to registered_at · DEFAULT now()'],
+    ],
+  },
+  {
+    name: 'members',
+    storage: 'Logical member records · public.profiles',
+    fields: [
+      ['member_id', 'bigint', 'PK · identity'],
+      ['full_name', 'text', 'NOT NULL'],
+      ['email', 'text', 'NOT NULL · UNIQUE'],
+      ['phone', 'text', "DEFAULT '' · can be empty"],
+      ['password_hash', '—', 'Handled by Supabase Auth; not in the library table'],
+      ['status', 'text', "NOT NULL · active, suspended, or inactive · DEFAULT 'active'"],
+      ['registered_at', 'timestamptz', 'NOT NULL · DEFAULT now()'],
+    ],
+  },
+  {
+    name: 'categories',
+    storage: 'Physical table · public.categories',
+    fields: [
+      ['category_id', 'bigint', 'PK · identity'],
+      ['category_name', 'text', 'NOT NULL · UNIQUE'],
+      ['description', 'text', "NOT NULL · DEFAULT ''"],
+    ],
+  },
+  {
+    name: 'authors',
+    storage: 'Physical table · public.authors',
+    fields: [
+      ['author_id', 'bigint', 'PK · identity'],
+      ['author_name', 'text', 'NOT NULL · UNIQUE'],
+      ['biography', 'text', "NOT NULL · DEFAULT ''"],
+    ],
+  },
+] as const;
 
 interface AdminDashboardProps {
   adminUser: Admin;
@@ -39,8 +85,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
     );
   }
 
-  // Max value for bar chart height normalization
-  const maxTrend = Math.max(...metrics.borrowing_trends.map((t) => t.count), 100);
+  const trendData = metrics.borrowing_trends.slice(-5);
+  const maxTrend = Math.max(...trendData.map((trend) => trend.count), 1);
+  const trendColors = ['bg-[#d1ced8]', 'bg-[#a7a1b5]', 'bg-[#817995]', 'bg-[#51436d]', 'bg-[#26134c]'];
 
   return (
     <div className="space-y-6">
@@ -140,33 +187,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
             <span className="text-xs text-slate-500">Monthly Circulation Volume</span>
           </div>
 
-          <div className="h-52 flex items-end justify-between gap-4 pt-6 pb-2 px-4 border-b border-slate-100">
-            {metrics.borrowing_trends.map((t, idx) => {
-              const heightPct = Math.round((t.count / maxTrend) * 100);
-              // Palette shades matching screenshot purple/slate gradient
-              const bgColors = [
-                'bg-slate-300',
-                'bg-slate-400',
-                'bg-indigo-400',
-                'bg-indigo-700',
-                'bg-indigo-900',
-              ];
-              const col = bgColors[idx % bgColors.length];
-
+          <div className="mt-4 flex h-28 items-end justify-between gap-1.5 rounded-sm bg-slate-50 p-2 sm:gap-2">
+            {trendData.map((trend, idx) => {
+              const heightPct = trend.count === 0 ? 0 : Math.max(12, Math.round((trend.count / maxTrend) * 100));
               return (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2 group">
-                  <span className="text-[11px] font-mono font-medium text-slate-600 tabular-nums">
-                    {t.count}
-                  </span>
-                  <div className="w-full max-w-[50px] bg-slate-100 rounded-t-sm h-36 flex items-end">
-                    <div
-                      style={{ height: `${heightPct}%` }}
-                      className={`w-full ${col} rounded-t-sm transition-all duration-500`}
-                    />
-                  </div>
-                  <span className="text-xs font-medium text-slate-600 mt-1">
-                    {t.period}
-                  </span>
+                <div
+                  key={trend.period}
+                  role="img"
+                  aria-label={`${trend.period}: ${trend.count} borrowings`}
+                  className="flex h-full flex-1 items-end"
+                >
+                  <div
+                    style={{ height: `${heightPct}%` }}
+                    className={`w-full ${trendColors[idx % trendColors.length]} transition-all duration-500`}
+                  />
                 </div>
               );
             })}
@@ -279,6 +313,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
           </table>
         </div>
       </div>
+
+      <section className="space-y-4" aria-labelledby="database-schema-heading">
+        <div>
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-indigo-700" />
+            <h2 id="database-schema-heading" className="text-sm font-bold uppercase tracking-wider text-slate-900">
+              Database schema
+            </h2>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Supabase PostgreSQL core tables and constraints. Staff and member accounts share <code>public.profiles</code> and are distinguished by role; credentials are managed by Supabase Auth.
+          </p>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          {schemaTables.map((table) => (
+            <article key={table.name} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+              <header className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                <h3 className="font-mono text-sm font-bold text-indigo-900">{table.name}</h3>
+                <p className="mt-0.5 text-[11px] text-slate-500">{table.storage}</p>
+              </header>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-xs">
+                  <thead className="text-[10px] uppercase tracking-wider text-slate-500">
+                    <tr>
+                      <th className="px-4 py-2 font-semibold">Column</th>
+                      <th className="px-4 py-2 font-semibold">PostgreSQL type</th>
+                      <th className="px-4 py-2 font-semibold">Key / constraints</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {table.fields.map(([column, type, constraints]) => (
+                      <tr key={column}>
+                        <td className="whitespace-nowrap px-4 py-2 font-mono font-medium text-slate-800">{column}</td>
+                        <td className="whitespace-nowrap px-4 py-2 font-mono text-slate-600">{type}</td>
+                        <td className="px-4 py-2 text-slate-600">{constraints}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <p className="rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-xs text-indigo-900">
+          Relationships: one category has many books; books and authors connect through <code>book_authors</code>; members borrow and reserve books; staff are recorded on loans through <code>issued_by</code>.
+        </p>
+      </section>
     </div>
   );
 };
