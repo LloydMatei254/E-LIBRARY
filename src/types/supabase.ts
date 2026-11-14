@@ -75,12 +75,28 @@ type ReservationRow = {
 
 type FineRow = {
   fine_id: number;
-  borrowing_id: number;
+  member_id: number;
+  borrowing_id: number | null;
   amount: number;
   reason: string;
   status: 'unpaid' | 'paid';
   issued_date: string;
   paid_date: string | null;
+};
+
+type FinePaymentRow = {
+  payment_id: number;
+  fine_id: number;
+  member_id: number;
+  amount: number;
+  phone_number: string;
+  status: 'initiating' | 'pending' | 'paid' | 'failed';
+  merchant_request_id: string | null;
+  checkout_request_id: string | null;
+  mpesa_receipt_number: string | null;
+  result_description: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export interface Database {
@@ -94,14 +110,28 @@ export interface Database {
       borrowings: Table<BorrowingRow, Omit<BorrowingRow, 'borrowing_id'>, Partial<Omit<BorrowingRow, 'borrowing_id'>>>;
       reservations: Table<ReservationRow, Omit<ReservationRow, 'reservation_id' | 'reservation_date'>, Partial<Omit<ReservationRow, 'reservation_id'>>>;
       fines: Table<FineRow, Omit<FineRow, 'fine_id'>, Partial<Omit<FineRow, 'fine_id'>>>;
+      fine_payments: Table<FinePaymentRow, Omit<FinePaymentRow, 'payment_id' | 'created_at' | 'updated_at'>, Partial<Omit<FinePaymentRow, 'payment_id' | 'created_at'>>>;
     };
     Views: Record<string, never>;
     Functions: {
       save_book: { Args: { p_book_id: number | null; p_payload: Json }; Returns: number };
       issue_book: { Args: { p_member_identifier: string; p_book_identifier: string; p_loan_days?: number }; Returns: Json };
-      return_book: { Args: { p_book_identifier: string; p_condition?: string; p_damage_fee?: number }; Returns: Json };
+      return_book: { Args: { p_book_identifier: string; p_condition?: string; p_damage_fee?: number; p_borrowing_id?: number | null }; Returns: Json };
       reserve_book: { Args: { p_member_id: number; p_book_id: number }; Returns: Json };
       mark_fine_paid: { Args: { p_fine_id: number }; Returns: boolean };
+      update_member_details: { Args: { p_member_id: number; p_full_name: string; p_phone: string }; Returns: boolean };
+      add_member_fine: { Args: { p_member_id: number; p_amount: number; p_reason: string }; Returns: number };
+      finalize_mpesa_payment: {
+        Args: {
+          p_payment_id: number;
+          p_checkout_request_id: string;
+          p_result_code: number;
+          p_result_description: string;
+          p_amount?: number | null;
+          p_mpesa_receipt_number?: string | null;
+        };
+        Returns: boolean;
+      };
       get_schema_summary: { Args: Record<string, never>; Returns: Json };
       can_upload_book_cover: { Args: { p_object_name: string }; Returns: boolean };
     };

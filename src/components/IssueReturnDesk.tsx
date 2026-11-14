@@ -10,18 +10,20 @@ export const IssueReturnDesk: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Issue Book State matching Section 3.6 Left Box
-  const [issueMemberId, setIssueMemberId] = useState('M0012');
-  const [issueBookId, setIssueBookId] = useState('978-0-00-00000');
+  const [issueMemberId, setIssueMemberId] = useState('');
+  const [issueBookId, setIssueBookId] = useState('');
   const [issuing, setIssuing] = useState(false);
 
   // Return Book State matching Section 3.6 Right Box
   const [returnBookId, setReturnBookId] = useState('');
+  const [returnBorrowingId, setReturnBorrowingId] = useState<number | null>(null);
   const [returnCondition, setReturnCondition] = useState('Good');
   const [damageFee, setDamageFee] = useState<number>(0);
   const [returning, setReturning] = useState(false);
 
   const loadLoans = async () => {
     setLoading(true);
+    setError(null);
     try {
       const loans = await api.getActiveLoans();
       setActiveLoans(loans);
@@ -33,7 +35,15 @@ export const IssueReturnDesk: React.FC = () => {
   };
 
   useEffect(() => {
-    loadLoans();
+    let active = true;
+    void loadLoans();
+    const unsubscribe = api.subscribeToAdminUpdates(() => {
+      if (active) void loadLoans();
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   const notify = (msg: string) => {
@@ -67,13 +77,19 @@ export const IssueReturnDesk: React.FC = () => {
     setError(null);
     setReturning(true);
     try {
-      const res = await api.returnBook(returnBookId, returnCondition, damageFee);
+      if (returnCondition === 'Lost' && damageFee <= 0) {
+        setError('Enter the replacement fine for a lost book.');
+        return;
+      }
+      const res = await api.returnBook(returnBookId, returnCondition, damageFee, returnBorrowingId ?? undefined);
       let fineNotice = '';
       if (res.fine_amount > 0) {
         fineNotice = ` (Assessed Fine: KES ${res.fine_amount.toFixed(2)})`;
       }
       notify(`Book "${res.book_title}" successfully returned by ${res.member_name}!${fineNotice}`);
       setReturnBookId('');
+      setReturnBorrowingId(null);
+      setReturnCondition('Good');
       setDamageFee(0);
       loadLoans();
     } catch (err: any) {
@@ -85,6 +101,9 @@ export const IssueReturnDesk: React.FC = () => {
 
   const handleQuickReturn = (loan: Borrowing) => {
     setReturnBookId(loan.book_isbn || String(loan.book_id));
+    setReturnBorrowingId(loan.borrowing_id);
+    setReturnCondition('Good');
+    setDamageFee(0);
   };
 
   return (
@@ -189,7 +208,10 @@ export const IssueReturnDesk: React.FC = () => {
                 required
                 placeholder="Scan or enter code"
                 value={returnBookId}
-                onChange={(e) => setReturnBookId(e.target.value)}
+                onChange={(e) => {
+                  setReturnBookId(e.target.value);
+                  setReturnBorrowingId(null);
+                }}
                 className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-mono"
               />
             </div>
@@ -205,6 +227,7 @@ export const IssueReturnDesk: React.FC = () => {
                   if (e.target.value === 'Damaged') setDamageFee(500);
                   else if (e.target.value === 'Minor Wear') setDamageFee(100);
                   else setDamageFee(0);
+                  if (e.target.value === 'Lost') setDamageFee(0);
                 }}
                 className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
               >
@@ -214,6 +237,24 @@ export const IssueReturnDesk: React.FC = () => {
                 <option value="Lost">Lost Item Replacement</option>
               </select>
             </div>
+
+            {returnCondition === 'Lost' && (
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1" htmlFor="lost-replacement-fine">
+                  Replacement fine (KES) *
+                </label>
+                <input
+                  id="lost-replacement-fine"
+                  type="number"
+                  min={1}
+                  step={1}
+                  required
+                  value={damageFee || ''}
+                  onChange={(event) => setDamageFee(Number(event.target.value))}
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                />
+              </div>
+            )}
 
             <div className="py-2 px-3 bg-slate-50 rounded-lg border border-slate-100 text-xs text-slate-600 flex items-center justify-between">
               <span className="text-slate-500">Fine (if overdue / condition):</span>

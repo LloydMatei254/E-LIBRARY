@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Borrowing, Fine, Member, Reservation } from '../types';
 import { api } from '../services/api';
+import { isDemoMode } from '../services/supabaseClient';
 
 type PortalSection = 'overview' | 'books' | 'fines' | 'reservations' | 'profile' | 'settings';
 
@@ -81,6 +82,7 @@ const readPreferences = (): PortalPreferences => {
 };
 
 export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateToCatalog, onLogout }) => {
+  const [profile, setProfile] = useState(member);
   const [section, setSection] = useState<PortalSection>('overview');
   const [loans, setLoans] = useState<Borrowing[]>([]);
   const [fines, setFines] = useState<Fine[]>([]);
@@ -90,38 +92,58 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
   const [feedback, setFeedback] = useState<{ message: string; error?: boolean } | null>(null);
   const [preferences, setPreferences] = useState<PortalPreferences>(readPreferences);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [payingFine, setPayingFine] = useState<Fine | null>(null);
+  const [mpesaPhone, setMpesaPhone] = useState(member.phone);
+  const [requestingPayment, setRequestingPayment] = useState(false);
+  const onLogoutRef = useRef(onLogout);
 
-  const loadData = async () => {
-    setLoading(true);
+  useEffect(() => {
+    onLogoutRef.current = onLogout;
+  }, [onLogout]);
+
+  const loadData = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setLoadError(null);
     try {
       const [allLoans, memberFines, memberReservations] = await Promise.all([
-        api.getActiveLoans(member.member_id),
-        api.getFines(member.member_id),
-        api.getReservations(member.member_id),
+        api.getActiveLoans(profile.member_id),
+        api.getFines(profile.member_id),
+        api.getReservations(profile.member_id),
       ]);
-      setLoans(allLoans.filter((loan) => loan.member_id === member.member_id));
+      setLoans(allLoans.filter((loan) => loan.member_id === profile.member_id));
       setFines(memberFines);
       setReservations(memberReservations);
     } catch (error) {
       console.error('Could not load member portal data.', error);
       setLoadError(error instanceof Error ? error.message : 'We could not load your library account.');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
     let active = true;
     void loadData();
-    const unsubscribe = api.subscribeToMemberUpdates(member.member_id, () => {
-      if (active) void loadData();
+    const unsubscribe = api.subscribeToMemberUpdates(profile.member_id, () => {
+      if (!active) return;
+      void loadData(false);
+      void api.getCurrentAccount()
+        .then((account) => {
+          if (!active) return;
+          if (account.member) setProfile(account.member);
+          else onLogoutRef.current();
+        })
+        .catch((error: unknown) => console.error('Could not refresh the member profile.', error));
     });
     return () => {
       active = false;
       unsubscribe();
     };
-  }, [member.member_id]);
+  }, [profile.member_id]);
+
+  useEffect(() => {
+    setProfile(member);
+  }, [member]);
 
   const handleSavePreferences = (event: React.FormEvent) => {
     event.preventDefault();
@@ -134,6 +156,26 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
     }
   };
 
+  const handleRequestFinePayment = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!payingFine) return;
+    setRequestingPayment(true);
+    setFeedback(null);
+    try {
+      const result = await api.requestFinePayment(payingFine.fine_id, mpesaPhone);
+      setFeedback({ message: result.message });
+      setPayingFine(null);
+      void loadData(false);
+    } catch (error) {
+      setFeedback({
+        message: error instanceof Error ? error.message : 'Could not start the M-Pesa payment.',
+        error: true,
+      });
+    } finally {
+      setRequestingPayment(false);
+    }
+  };
+
   const unpaidFinesTotal = fines
     .filter((fine) => fine.status === 'unpaid')
     .reduce((sum, fine) => sum + fine.amount, 0);
@@ -143,7 +185,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
   }).length;
   const activeReservations = reservations.filter((reservation) => reservation.status === 'pending').length;
   const title = navItems.find((item) => item.id === section)?.label ?? 'Overview';
-  const initials = member.full_name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+  const initials = profile.full_name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 
   const selectSection = (nextSection: PortalSection) => {
     setSection(nextSection);
@@ -241,7 +283,23 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
       <div className="flex items-center justify-between gap-3 sm:justify-end">
         <span className="font-semibold tabular-nums text-slate-900">KES {fine.amount.toFixed(2)}</span>
         {fine.status === 'unpaid' ? (
-          statusPill('Pay at library desk', 'amber')
+          fine.payment_status
+            ? statusPill(
+                fine.payment_status === 'initiating' ? 'Starting M-Pesa prompt' : 'M-Pesa prompt sent',
+                'amber',
+              )
+            : isDemoMode
+            ? statusPill('Unpaid', 'amber')
+            : <button
+                type="button"
+                onClick={() => {
+                  setMpesaPhone(profile.phone);
+                  setPayingFine(fine);
+                }}
+                className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800"
+              >
+                Pay with M-Pesa
+              </button>
         ) : statusPill('Paid', 'green')}
       </div>
     </div>
@@ -259,7 +317,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
   const renderOverview = () => (
     <>
       {pageHeading(
-        `Welcome back, ${member.full_name.split(' ')[0]}`,
+        `Welcome back, ${profile.full_name.split(' ')[0]}`,
         'Here’s what’s happening with your library account.',
         <button
           type="button"
@@ -320,13 +378,13 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800">{initials}</div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-900">{member.full_name}</p>
-                <p className="truncate text-xs text-slate-500">{member.member_code || `M${String(member.member_id).padStart(4, '0')}`}</p>
+                <p className="truncate text-sm font-semibold text-slate-900">{profile.full_name}</p>
+                <p className="truncate text-xs text-slate-500">{profile.member_code || `M${String(profile.member_id).padStart(4, '0')}`}</p>
               </div>
             </div>
             <div className="mt-4 border-t border-slate-100 pt-4 text-xs text-slate-500">
-              <p className="truncate">{member.email}</p>
-              <p className="mt-2">Member since {formatDate(member.registered_at)}</p>
+              <p className="truncate">{profile.email}</p>
+              <p className="mt-2">Member since {formatDate(profile.registered_at)}</p>
             </div>
           </section>
 
@@ -429,17 +487,17 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
         <div className="flex items-center gap-4 border-b border-slate-100 p-6">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-lg font-bold text-emerald-800">{initials}</div>
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">{member.full_name}</h2>
-            <p className="mt-1 text-sm text-slate-500">{statusPill(member.status.charAt(0).toUpperCase() + member.status.slice(1), member.status === 'active' ? 'green' : 'amber')}</p>
+            <h2 className="text-lg font-semibold text-slate-900">{profile.full_name}</h2>
+            <p className="mt-1 text-sm text-slate-500">{statusPill(profile.status.charAt(0).toUpperCase() + profile.status.slice(1), profile.status === 'active' ? 'green' : 'amber')}</p>
           </div>
         </div>
         <dl className="grid gap-x-8 sm:grid-cols-2">
           {[
-            ['Member ID', member.member_code || `M${String(member.member_id).padStart(4, '0')}`],
-            ['Email address', member.email],
-            ['Phone number', member.phone || 'Not provided'],
-            ['Membership type', member.role || 'Member'],
-            ['Registered', formatDate(member.registered_at)],
+            ['Member ID', profile.member_code || `M${String(profile.member_id).padStart(4, '0')}`],
+            ['Email address', profile.email],
+            ['Phone number', profile.phone || 'Not provided'],
+            ['Membership type', profile.role || 'Member'],
+            ['Registered', formatDate(profile.registered_at)],
           ].map(([label, value]) => (
             <div key={label} className="border-b border-slate-100 px-6 py-4">
               <dt className="text-xs font-medium text-slate-500">{label}</dt>
@@ -544,7 +602,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
               <button type="button" onClick={() => selectSection('profile')} className="flex items-center gap-2.5 text-left">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">{initials}</span>
                 <span className="hidden sm:block">
-                  <span className="block max-w-40 truncate text-sm font-semibold text-slate-800">{member.full_name}</span>
+                  <span className="block max-w-40 truncate text-sm font-semibold text-slate-800">{profile.full_name}</span>
                   <span className="block text-[11px] text-slate-500">Library member</span>
                 </span>
               </button>
@@ -573,7 +631,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
             {loadError && (
               <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
                 <span>{loadError}</span>
-                <button type="button" onClick={loadData} className="font-semibold underline underline-offset-2">Try again</button>
+                <button type="button" onClick={() => void loadData()} className="font-semibold underline underline-offset-2">Try again</button>
               </div>
             )}
             {loading ? (
@@ -594,6 +652,54 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
           <a href="mailto:librarian@library.ac.ke" className="hover:text-emerald-700">Contact support</a>
         </footer>
       </div>
+      {payingFine && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="presentation">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mpesa-payment-heading"
+            className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"
+          >
+            <h2 id="mpesa-payment-heading" className="text-lg font-semibold text-slate-900">Pay fine with M-Pesa</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              KES {payingFine.amount.toFixed(2)} for {payingFine.book_title}. Enter the phone number that should receive the STK prompt.
+            </p>
+            <form onSubmit={handleRequestFinePayment} className="mt-5 space-y-4">
+              <label className="block text-sm font-medium text-slate-700" htmlFor="mpesa-phone">
+                M-Pesa phone number
+                <input
+                  id="mpesa-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  required
+                  value={mpesaPhone}
+                  onChange={(event) => setMpesaPhone(event.target.value)}
+                  placeholder="0712345678 or +254712345678"
+                  className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                />
+              </label>
+              <p className="text-xs text-slate-500">A payment prompt will appear on that phone. Approve it using your M-Pesa PIN.</p>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={requestingPayment}
+                  onClick={() => setPayingFine(null)}
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={requestingPayment}
+                  className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
+                >
+                  {requestingPayment ? 'Sending prompt…' : 'Send M-Pesa prompt'}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </div>
   );
 };

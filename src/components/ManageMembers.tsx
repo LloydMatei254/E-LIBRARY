@@ -19,6 +19,13 @@ export const ManageMembers: React.FC = () => {
 
   // View Member Modal
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [fineAmount, setFineAmount] = useState(500);
+  const [fineReason, setFineReason] = useState('');
+  const [savingMember, setSavingMember] = useState(false);
+  const [addingFine, setAddingFine] = useState(false);
 
   const loadMembers = async () => {
     setLoading(true);
@@ -36,7 +43,15 @@ export const ManageMembers: React.FC = () => {
   };
 
   useEffect(() => {
+    let active = true;
     loadMembers();
+    const unsubscribe = api.subscribeToAdminUpdates(() => {
+      if (active) void loadMembers();
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [statusFilter]);
 
   const notify = (msg: string) => {
@@ -77,6 +92,52 @@ export const ManageMembers: React.FC = () => {
       loadMembers();
     } catch (err: any) {
       setError(err.message || 'Registration failed');
+    }
+  };
+
+  const openEditModal = (member: Member) => {
+    setSelectedMember(null);
+    setEditingMember(member);
+    setEditName(member.full_name);
+    setEditPhone(member.phone);
+    setError(null);
+  };
+
+  const handleSaveMember = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingMember) return;
+    setSavingMember(true);
+    setError(null);
+    try {
+      await api.updateMemberDetails(editingMember.member_id, { full_name: editName, phone: editPhone });
+      notify(`Updated ${editName}'s member profile.`);
+      setEditingMember(null);
+      await loadMembers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update the member profile.');
+    } finally {
+      setSavingMember(false);
+    }
+  };
+
+  const handleAddFine = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedMember) return;
+    if (!Number.isSafeInteger(fineAmount) || fineAmount <= 0) {
+      setError('Enter a whole-shilling fine amount greater than zero.');
+      return;
+    }
+    setAddingFine(true);
+    setError(null);
+    try {
+      await api.addMemberFine(selectedMember.member_id, fineAmount, fineReason);
+      notify(`Added KES ${fineAmount.toFixed(2)} fine to ${selectedMember.full_name}'s account.`);
+      setFineAmount(500);
+      setFineReason('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not add the fine.');
+    } finally {
+      setAddingFine(false);
     }
   };
 
@@ -219,13 +280,18 @@ export const ManageMembers: React.FC = () => {
                       <td className="py-3 px-4 text-right">
                         <div className="inline-flex items-center gap-1.5">
                           <button
-                            onClick={() => setSelectedMember(m)}
+                            onClick={() => {
+                              setError(null);
+                              setFineAmount(500);
+                              setFineReason('');
+                              setSelectedMember(m);
+                            }}
                             className="px-2.5 py-1 text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded border border-slate-300 transition-colors"
                           >
                             View
                           </button>
                           <button
-                            onClick={() => setSelectedMember(m)}
+                            onClick={() => openEditModal(m)}
                             className="px-2.5 py-1 text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded border border-slate-300 transition-colors"
                           >
                             Edit
@@ -347,7 +413,7 @@ export const ManageMembers: React.FC = () => {
       {/* View Member Modal */}
       {selectedMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-sm w-full p-6 relative">
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 relative">
             <button
               onClick={() => setSelectedMember(null)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-md"
@@ -388,6 +454,14 @@ export const ManageMembers: React.FC = () => {
 
             <div className="pt-3 border-t border-slate-100 flex gap-2">
               <button
+                type="button"
+                onClick={() => openEditModal(selectedMember)}
+                className="w-full py-2 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100"
+              >
+                Edit details
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   handleToggleStatus(selectedMember);
                   setSelectedMember(null);
@@ -401,6 +475,100 @@ export const ManageMembers: React.FC = () => {
                 {selectedMember.status === 'active' ? 'Suspend Member' : 'Activate Member'}
               </button>
             </div>
+
+            <form onSubmit={handleAddFine} className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+              <h4 className="text-xs font-bold uppercase tracking-wide text-slate-700">Add account fine</h4>
+              {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
+              <div className="grid grid-cols-2 gap-3">
+                <label className="text-xs font-medium text-slate-600">
+                  Amount (KES)
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    required
+                    value={fineAmount}
+                    onChange={(event) => setFineAmount(Number(event.target.value))}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </label>
+                <label className="text-xs font-medium text-slate-600">
+                  Reason
+                  <input
+                    type="text"
+                    value={fineReason}
+                    onChange={(event) => setFineReason(event.target.value)}
+                    placeholder="Library fine"
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </label>
+              </div>
+              <button
+                type="submit"
+                disabled={addingFine}
+                className="w-full rounded-lg bg-amber-600 py-2 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+              >
+                {addingFine ? 'Adding fine…' : 'Add fine to member account'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingMember && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="relative w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <button
+              type="button"
+              disabled={savingMember}
+              onClick={() => setEditingMember(null)}
+              className="absolute right-4 top-4 rounded-md p-1 text-slate-400 hover:text-slate-600"
+              aria-label="Close edit member dialog"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="mb-4 border-b border-slate-200 pb-2 text-sm font-bold text-slate-900">
+              Edit member details
+            </h3>
+            <form onSubmit={handleSaveMember} className="space-y-4">
+              <label className="block text-xs font-medium text-slate-700">
+                Full name
+                <input
+                  required
+                  value={editName}
+                  onChange={(event) => setEditName(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </label>
+              <label className="block text-xs font-medium text-slate-700">
+                Phone number
+                <input
+                  type="tel"
+                  value={editPhone}
+                  onChange={(event) => setEditPhone(event.target.value)}
+                  placeholder="+254712345678"
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </label>
+              {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
+              <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+                <button
+                  type="button"
+                  disabled={savingMember}
+                  onClick={() => setEditingMember(null)}
+                  className="rounded-lg px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingMember}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+                >
+                  {savingMember ? 'Saving…' : 'Save changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

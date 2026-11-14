@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, Users, Clock, AlertTriangle, ArrowUpRight, CheckCircle2, TrendingUp, Database } from 'lucide-react';
 import { DashboardMetrics, Admin } from '../types';
 import { api } from '../services/api';
+import { isDemoMode } from '../services/supabaseClient';
 
 const schemaTables = [
   {
@@ -57,22 +58,35 @@ interface AdminDashboardProps {
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNavigateSubview }) => {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     const load = async () => {
       try {
         const data = await api.getDashboard();
-        setMetrics(data);
+        if (active) {
+          setMetrics(data);
+          setLoadError(null);
+        }
       } catch (err) {
-        console.error(err);
+        console.error('Could not load the admin dashboard.', err);
+        if (active) setLoadError(err instanceof Error ? err.message : 'Could not load live dashboard data.');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
-    load();
+    void load();
+    const unsubscribe = api.subscribeToAdminUpdates(() => {
+      if (active) void load();
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
-  if (loading || !metrics) {
+  if (loading && !metrics) {
     return (
       <div className="p-8 space-y-6 max-w-7xl mx-auto">
         <div className="h-8 w-48 bg-slate-200 rounded animate-pulse" />
@@ -85,9 +99,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
     );
   }
 
-  const trendData = metrics.borrowing_trends.slice(-5);
+  if (!metrics) {
+    return (
+      <div role="alert" className="mx-auto max-w-7xl rounded-xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+        <p className="font-semibold">Dashboard data could not be loaded.</p>
+        <p className="mt-1">{loadError ?? 'Check your Supabase connection and try again.'}</p>
+      </div>
+    );
+  }
+
+  const trendData = metrics.borrowing_trends;
   const maxTrend = Math.max(...trendData.map((trend) => trend.count), 1);
   const trendColors = ['bg-[#d1ced8]', 'bg-[#a7a1b5]', 'bg-[#817995]', 'bg-[#51436d]', 'bg-[#26134c]'];
+  const categoryTotal = metrics.category_distribution.reduce((total, category) => total + category.count, 0);
+  const topCategory = metrics.category_distribution.reduce(
+    (top, category) => category.count > (top?.count ?? 0) ? category : top,
+    metrics.category_distribution[0],
+  );
+  const topCategoryShare = categoryTotal > 0 && topCategory
+    ? Math.round((topCategory.count / categoryTotal) * 100)
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -103,6 +134,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
         </div>
 
         <div className="flex items-center gap-2">
+          <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+            isDemoMode ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
+          }`}>
+            {isDemoMode ? 'Demo data' : 'Live Supabase data'}
+          </span>
           <button
             onClick={() => onNavigateSubview('circulation')}
             className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors whitespace-nowrap shrink-0 shadow-xs"
@@ -111,6 +147,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
           </button>
         </div>
       </div>
+
+      {loadError && (
+        <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+          Could not refresh the dashboard. Showing the most recently available data. {loadError}
+        </div>
+      )}
 
       {/* 4 KPI Cards strictly matching Deliverable 2 Page 2 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -187,7 +229,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
             <span className="text-xs text-slate-500">Monthly Circulation Volume</span>
           </div>
 
-          <div className="mt-4 flex h-28 items-end justify-between gap-1.5 rounded-sm bg-slate-50 p-2 sm:gap-2">
+          <div className="mt-4 flex h-36 items-end justify-between gap-1.5 rounded-sm bg-slate-50 p-2 sm:gap-2">
             {trendData.map((trend, idx) => {
               const heightPct = trend.count === 0 ? 0 : Math.max(12, Math.round((trend.count / maxTrend) * 100));
               return (
@@ -195,12 +237,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
                   key={trend.period}
                   role="img"
                   aria-label={`${trend.period}: ${trend.count} borrowings`}
-                  className="flex h-full flex-1 items-end"
+                  className="flex h-full min-w-0 flex-1 flex-col items-center justify-end"
                 >
                   <div
+                    className="mb-1 text-[10px] font-medium tabular-nums text-slate-500"
+                  >
+                    {trend.count}
+                  </div>
+                  <div
                     style={{ height: `${heightPct}%` }}
-                    className={`w-full ${trendColors[idx % trendColors.length]} transition-all duration-500`}
+                    className={`w-full min-h-0 ${trendColors[idx % trendColors.length]} transition-all duration-500`}
                   />
+                  <span className="mt-1 whitespace-nowrap text-[9px] text-slate-500">{trend.period}</span>
                 </div>
               );
             })}
@@ -233,14 +281,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
                     stroke="#312e81"
                     strokeWidth="12"
                     strokeDasharray="251.2"
-                    strokeDashoffset="62.8"
+                    strokeDashoffset={251.2 * (1 - topCategoryShare / 100)}
                     strokeLinecap="round"
                     fill="transparent"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-2xl font-bold font-mono text-slate-900">75%</span>
-                  <span className="text-[10px] text-slate-500">Tech & Sci</span>
+                  <span className="text-2xl font-bold font-mono text-slate-900">{topCategoryShare}%</span>
+                  <span className="max-w-24 truncate text-[10px] text-slate-500">{topCategory?.name ?? 'No categories'}</span>
                 </div>
               </div>
             </div>

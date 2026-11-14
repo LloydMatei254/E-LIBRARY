@@ -1,0 +1,7 @@
+project_id = "berzowanley-online-library-system"
+
+[functions.mpesa-stk]
+verify_jwt = true
+
+[functions.mpesa-callback]
+verify_jwt = false

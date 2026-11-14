@@ -221,37 +221,58 @@ async function loadActiveBorrowings(memberId?: number): Promise<Borrowing[]> {
 }
 
 async function loadFines(memberId?: number): Promise<Fine[]> {
-  let borrowingsQuery = getSupabaseClient().from('borrowings').select('*');
-  if (memberId !== undefined) borrowingsQuery = borrowingsQuery.eq('member_id', memberId);
-  const { data: borrowings, error: borrowingsError } = await borrowingsQuery;
-  throwIfError(borrowingsError);
-  const rows = borrowings ?? [];
-  if (rows.length === 0) return [];
-
-  const { data: fineRows, error } = await getSupabaseClient()
-    .from('fines')
-    .select('*')
-    .in('borrowing_id', rows.map((row) => row.borrowing_id))
-    .order('issued_date', { ascending: false });
+  let query = getSupabaseClient().from('fines').select('*').order('issued_date', { ascending: false });
+  if (memberId !== undefined) query = query.eq('member_id', memberId);
+  const { data: fineRows, error } = await query;
   throwIfError(error);
 
-  const borrowingById = new Map(rows.map((row) => [row.borrowing_id, row]));
+  const rows = fineRows ?? [];
+  if (rows.length === 0) return [];
+  let paymentQuery = getSupabaseClient()
+    .from('fine_payments')
+    .select('fine_id, status, created_at')
+    .in('status', ['initiating', 'pending'])
+    .order('created_at', { ascending: false });
+  if (memberId !== undefined) paymentQuery = paymentQuery.eq('member_id', memberId);
+  const { data: paymentRows, error: paymentError } = await paymentQuery;
+  throwIfError(paymentError);
+  const activePayments = new Map<number, 'initiating' | 'pending'>();
+  for (const payment of paymentRows ?? []) {
+    if (!activePayments.has(payment.fine_id) && (payment.status === 'initiating' || payment.status === 'pending')) {
+      activePayments.set(payment.fine_id, payment.status);
+    }
+  }
+  const borrowingIds = rows
+    .map((fine) => fine.borrowing_id)
+    .filter((id): id is number => id !== null);
+  let borrowings: BorrowingRow[] = [];
+  if (borrowingIds.length > 0) {
+    const { data, error: borrowingsError } = await getSupabaseClient()
+      .from('borrowings')
+      .select('*')
+      .in('borrowing_id', borrowingIds);
+    throwIfError(borrowingsError);
+    borrowings = data ?? [];
+  }
+  const borrowingById = new Map(borrowings.map((borrowing) => [borrowing.borrowing_id, borrowing]));
   const [profiles, books] = await Promise.all([
-    loadProfiles(rows.map((row) => row.member_id)),
-    loadBooksById(rows.map((row) => row.book_id)),
+    loadProfiles(rows.map((fine) => fine.member_id)),
+    loadBooksById(borrowings.map((borrowing) => borrowing.book_id)),
   ]);
-  return (fineRows ?? []).map((fine: FineRow) => {
-    const borrowing = borrowingById.get(fine.borrowing_id);
+  return rows.map((fine: FineRow) => {
+    const borrowing = fine.borrowing_id === null ? undefined : borrowingById.get(fine.borrowing_id);
     return {
       fine_id: fine.fine_id,
-      borrowing_id: fine.borrowing_id,
+      member_id: fine.member_id,
+      borrowing_id: fine.borrowing_id ?? undefined,
       amount: Number(fine.amount),
       reason: fine.reason,
       status: fine.status,
+      payment_status: activePayments.get(fine.fine_id),
       issued_date: fine.issued_date,
       paid_date: fine.paid_date ?? undefined,
-      member_name: borrowing ? profiles.get(borrowing.member_id)?.full_name ?? 'Member' : 'Member',
-      book_title: borrowing ? books.get(borrowing.book_id)?.title ?? 'Book' : 'Book',
+      member_name: profiles.get(fine.member_id)?.full_name ?? 'Member',
+      book_title: borrowing ? books.get(borrowing.book_id)?.title ?? 'Book' : 'Account fine',
     };
   });
 }
@@ -319,7 +340,7 @@ function buildBookPayload(bookData: Partial<Book>): Json {
 }
 
 async function getBookByIdFromCache(id: number): Promise<Book> {
-  const books = await readWithOfflineFallback('books:all', loadBooks, '/api/books');
+  const books = await readWithOfflineFallback('books:all', loadBooks);
   const book = books.find((item) => item.book_id === id);
   if (!book) throw new Error('Book not found.');
   return book;
@@ -379,7 +400,10 @@ export const supabaseApi = {
         supabaseApi.getMembers(),
         supabaseApi.getActiveLoans(),
         supabaseApi.getCategories(),
-        getSupabaseClient().from('borrowings').select('issue_date'),
+        getSupabaseClient()
+          .from('borrowings')
+          .select('member_id, book_id, issue_date, return_date')
+          .order('issue_date', { ascending: false }),
       ]);
       throwIfError(borrowingResult.error);
       const monthlyCounts = new Map<string, number>();
@@ -392,7 +416,7 @@ export const supabaseApi = {
         const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 5 + index, 1);
         const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         return {
-          period: date.toLocaleString('en-US', { month: 'short' }),
+          period: `${date.toLocaleString('en-US', { month: 'short' })} ${date.getFullYear()}`,
           count: monthlyCounts.get(month) ?? 0,
         };
       });
@@ -401,12 +425,28 @@ export const supabaseApi = {
         const name = book.category_name ?? 'Uncategorized';
         distribution.set(name, (distribution.get(name) ?? 0) + 1);
       }
-      const recentTransactions = loans.slice(0, 5).map((loan) => ({
-        member: loan.member_name,
-        book: loan.book_title,
-        action: 'Borrowed',
-        date: loan.issue_date,
-      }));
+      const memberNames = new Map(members.map((member) => [member.member_id, member.full_name]));
+      const bookTitles = new Map(books.map((book) => [book.book_id, book.title]));
+      const recentTransactions = (borrowingResult.data ?? [])
+        .flatMap((borrowing) => {
+          const events = [{
+            member: memberNames.get(borrowing.member_id) ?? 'Member',
+            book: bookTitles.get(borrowing.book_id) ?? 'Book',
+            action: 'Borrowed',
+            date: borrowing.issue_date,
+          }];
+          if (borrowing.return_date) {
+            events.push({
+              member: memberNames.get(borrowing.member_id) ?? 'Member',
+              book: bookTitles.get(borrowing.book_id) ?? 'Book',
+              action: 'Returned',
+              date: borrowing.return_date,
+            });
+          }
+          return events;
+        })
+        .sort((left, right) => right.date.localeCompare(left.date))
+        .slice(0, 5);
       return {
         total_books: books.length,
         total_copies: books.reduce((total, book) => total + book.total_copies, 0),
@@ -420,11 +460,11 @@ export const supabaseApi = {
         })),
         recent_transactions: recentTransactions,
       };
-    }, '/api/dashboard');
+    });
   },
 
   async getBooks(params?: { category_id?: number; search?: string; available_only?: boolean }): Promise<Book[]> {
-    const books = await readWithOfflineFallback('books:all', loadBooks, '/api/books');
+    const books = await readWithOfflineFallback('books:all', loadBooks);
     const search = params?.search?.trim().toLocaleLowerCase();
     return books.filter((book) => {
       if (params?.category_id && book.category_id !== params.category_id) return false;
@@ -518,7 +558,7 @@ export const supabaseApi = {
       const { data, error } = await getSupabaseClient().from('categories').select('*').order('category_name');
       throwIfError(error);
       return (data ?? []).map(mapCategory);
-    }, '/api/categories');
+    });
   },
 
   async addCategory(name: string, description = ''): Promise<Category> {
@@ -551,7 +591,7 @@ export const supabaseApi = {
       const { data, error } = await getSupabaseClient().from('authors').select('*').order('author_name');
       throwIfError(error);
       return (data ?? []).map(mapAuthor);
-    }, '/api/authors');
+    });
   },
 
   async addAuthor(name: string, biography = ''): Promise<Author> {
@@ -606,7 +646,7 @@ export const supabaseApi = {
           .slice(0, 5)
           .map(([bookId, count]) => ({ title: titleById.get(bookId) ?? 'Book', count })),
       };
-    }, '/api/reports');
+    });
   },
 
   async updateReservationStatus(id: number, status: string): Promise<boolean> {
@@ -631,7 +671,7 @@ export const supabaseApi = {
       const { data, error } = await getSupabaseClient().from('profiles').select('*').order('full_name');
       throwIfError(error);
       return (data ?? []).map(mapMember);
-    }, '/api/members');
+    });
     const search = params?.search?.trim().toLocaleLowerCase();
     return members.filter((member) => {
       if (member.role !== 'member') return false;
@@ -656,6 +696,30 @@ export const supabaseApi = {
     throwIfError(error);
     if (!data) throw new Error('Member not found or could not be updated.');
     return true;
+  },
+
+  async updateMemberDetails(memberId: number, details: { full_name: string; phone: string }): Promise<boolean> {
+    requireNetworkForMutation();
+    const { data, error } = await getSupabaseClient().rpc('update_member_details', {
+      p_member_id: memberId,
+      p_full_name: details.full_name,
+      p_phone: details.phone,
+    });
+    throwIfError(error);
+    if (!data) throw new Error('Member profile was not updated.');
+    return true;
+  },
+
+  async addMemberFine(memberId: number, amount: number, reason: string): Promise<number> {
+    requireNetworkForMutation();
+    const { data, error } = await getSupabaseClient().rpc('add_member_fine', {
+      p_member_id: memberId,
+      p_amount: amount,
+      p_reason: reason,
+    });
+    throwIfError(error);
+    if (data === null) throw new Error('The fine could not be added.');
+    return data;
   },
 
   async loginAdmin(email: string, password: string): Promise<Admin> {
@@ -756,12 +820,18 @@ export const supabaseApi = {
     return asObject(data, 'Issue transaction');
   },
 
-  async returnBook(bookIdentifier: string, condition = 'Good', damageFee = 0): Promise<Record<string, Json | undefined>> {
+  async returnBook(
+    bookIdentifier: string,
+    condition = 'Good',
+    damageFee = 0,
+    borrowingId?: number,
+  ): Promise<Record<string, Json | undefined>> {
     requireNetworkForMutation();
     const { data, error } = await getSupabaseClient().rpc('return_book', {
       p_book_identifier: bookIdentifier,
       p_condition: condition,
       p_damage_fee: damageFee,
+      p_borrowing_id: borrowingId ?? null,
     });
     throwIfError(error);
     return asObject(data, 'Return transaction');
@@ -769,14 +839,12 @@ export const supabaseApi = {
 
   async getActiveLoans(memberId?: number): Promise<Borrowing[]> {
     const cacheKey = await userCacheKey('loans', String(memberId ?? 'all'));
-    const query = memberId === undefined ? '' : `?member_id=${memberId}`;
-    return readWithOfflineFallback(cacheKey, () => loadActiveBorrowings(memberId), `/api/loans/active${query}`);
+    return readWithOfflineFallback(cacheKey, () => loadActiveBorrowings(memberId));
   },
 
   async getFines(memberId?: number): Promise<Fine[]> {
-    const cacheKey = await userCacheKey('fines', String(memberId ?? 'all'));
-    const query = memberId === undefined ? '' : `?member_id=${memberId}`;
-    return readWithOfflineFallback(cacheKey, () => loadFines(memberId), `/api/fines${query}`);
+    const cacheKey = await userCacheKey('fines-v2', String(memberId ?? 'all'));
+    return readWithOfflineFallback(cacheKey, () => loadFines(memberId));
   },
 
   async payFine(fineId: number): Promise<boolean> {
@@ -788,10 +856,21 @@ export const supabaseApi = {
     return data;
   },
 
+  async requestFinePayment(fineId: number, phone: string): Promise<{ message: string }> {
+    requireNetworkForMutation();
+    const { data, error } = await getSupabaseClient().functions.invoke<{ message?: string; error?: string }>('mpesa-stk', {
+      body: { fine_id: fineId, phone },
+    });
+    if (error) throw new Error(error.message || 'Could not start the M-Pesa payment.');
+    if (!data || data.error || !data.message) {
+      throw new Error(data?.error || 'M-Pesa did not return a payment confirmation.');
+    }
+    return { message: data.message };
+  },
+
   async getReservations(memberId?: number): Promise<Reservation[]> {
     const cacheKey = await userCacheKey('reservations', String(memberId ?? 'all'));
-    const query = memberId === undefined ? '' : `?member_id=${memberId}`;
-    return readWithOfflineFallback(cacheKey, () => loadReservations(memberId), `/api/reservations${query}`);
+    return readWithOfflineFallback(cacheKey, () => loadReservations(memberId));
   },
 
   async createReservation(memberId: number, bookId: number): Promise<Record<string, Json | undefined>> {
@@ -842,6 +921,19 @@ export const supabaseApi = {
         event: '*',
         schema: 'public',
         table: 'fines',
+        filter: `member_id=eq.${memberId}`,
+      }, onChange)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'fine_payments',
+        filter: `member_id=eq.${memberId}`,
+      }, onChange)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles',
+        filter: `member_id=eq.${memberId}`,
       }, onChange)
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -851,6 +943,24 @@ export const supabaseApi = {
     return () => {
       void client.removeChannel(channel).catch((error: unknown) => {
         console.error('Could not close the library live updates channel.', error);
+      });
+    };
+  },
+
+  subscribeToAdminUpdates(onChange: () => void): () => void {
+    const client = getSupabaseClient();
+    const channel = client.channel('library-admin-live-updates');
+    for (const table of ['borrowings', 'profiles', 'books', 'categories', 'fines', 'reservations'] as const) {
+      channel.on('postgres_changes', { event: '*', schema: 'public', table }, onChange);
+    }
+    channel.subscribe((status) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.error(`Admin dashboard live updates could not connect (${status}).`);
+      }
+    });
+    return () => {
+      void client.removeChannel(channel).catch((error: unknown) => {
+        console.error('Could not close the admin dashboard live updates channel.', error);
       });
     };
   },

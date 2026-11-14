@@ -1,5 +1,3 @@
-import { handleMockApiRequest } from './mockApi';
-
 const databaseName = 'berzowanley-library-offline';
 const storeName = 'api-cache';
 const databaseVersion = 1;
@@ -61,7 +59,6 @@ const isNetworkFailure = (error: unknown) => {
 export async function readWithOfflineFallback<T>(
   cacheKey: string,
   readOnline: () => Promise<T>,
-  mockPath?: string,
 ): Promise<T> {
   try {
     const data = await readOnline();
@@ -75,13 +72,7 @@ export async function readWithOfflineFallback<T>(
     const cached = await getCached<T>(cacheKey);
     if (cached !== undefined) return cached;
 
-    if (!mockPath) throw error;
-
-    const response = await handleMockApiRequest(mockPath);
-    if (!response.ok) {
-      throw new Error(`Offline fallback failed with status ${response.status}.`);
-    }
-    return response.json() as Promise<T>;
+    throw error;
   }
 }
 

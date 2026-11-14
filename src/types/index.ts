@@ -68,10 +68,12 @@ export interface Borrowing {
 
 export interface Fine {
   fine_id: number;
-  borrowing_id: number;
+  member_id?: number;
+  borrowing_id?: number;
   amount: number;
   reason: string;
   status: 'unpaid' | 'paid';
+  payment_status?: 'initiating' | 'pending';
   issued_date: string;
   paid_date?: string;
   member_name: string;

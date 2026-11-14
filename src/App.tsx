@@ -34,7 +34,9 @@ const OfflineFallbackNotice = () => {
   if (!active) return null;
   return (
     <div role="status" className="sticky top-0 z-[60] bg-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-900">
-      You are viewing saved or demo data. Borrowing, reservations, and staff changes need an internet connection.
+      {isDemoMode
+        ? 'Demo data is active. Borrowing, reservations, and staff changes need a live connection.'
+        : 'You are viewing previously saved Supabase data. Borrowing, reservations, and staff changes need an internet connection.'}
     </div>
   );
 };

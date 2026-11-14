@@ -6,7 +6,7 @@ The application supports a local demo mode and a Supabase-backed live mode. Live
 
 1. Install dependencies with `npm install`.
 2. Copy `.env.example` to `.env.local`.
-3. Keep `VITE_DEMO_MODE=true` to run with the built-in mock data, or configure Supabase as described below.
+3. Keep `VITE_DEMO_MODE=true` to force the built-in mock data. When Supabase URL and key are configured, the app uses live data unless demo mode is explicitly enabled.
 4. Start the app with `npm run dev`. Run `npm run lint` and `npm run build` to validate it.
 
 ## Configure Supabase
@@ -21,7 +21,7 @@ The application supports a local demo mode and a Supabase-backed live mode. Live
    ```
 
    Never put a `service_role` key in a `VITE_` variable or in browser code.
-3. Restart the local server. In Vercel, add the same three `VITE_` variables to the project’s Environment Variables and redeploy.
+3. Restart the local server. In Vercel, add the same three `VITE_` variables to the project’s Environment Variables and redeploy. Set `VITE_DEMO_MODE` to exactly `false` for live data.
 4. Configure Supabase Auth’s site URL and redirect URLs for the local app and deployed domain. Keep email confirmation enabled so existing member profiles are only linked after the member proves control of their email.
 5. To give a staff account access, first create/sign up the account, then promote its matching profile from the Supabase SQL Editor:
 
@@ -41,10 +41,36 @@ In live mode, staff can use **Import demo covers** in Manage Books to transfer t
 
 The Supabase schema starts empty; running the migration does not copy data from `backend/library.db`. Export books, categories, authors, members, loans, reservations, and fines from the existing SQLite database and import them in dependency order using the Supabase dashboard or a trusted one-time migration script. Do not import SQLite password hashes as Supabase credentials. Members must register or use Supabase password recovery; signup links an existing profile by email when available.
 
-Review and back up the target Supabase project before importing production records. Fine payments are recorded by staff, not members.
+Review and back up the target Supabase project before importing production records. Staff can create account fines, and members can request M-Pesa payment for an outstanding fine.
 
 ## Offline behavior
 
-Production builds register a service worker to cache the app shell and static assets. The browser’s IndexedDB cache stores successful API reads; when Supabase is unreachable, the app uses saved reads and falls back to demo data for resources that support it. The portal displays an offline/fallback notice. Writes are never queued or reported as successful offline.
+Production builds register a service worker to cache the app shell and static assets. The browser’s IndexedDB cache stores successful Supabase reads; when Supabase is unreachable, the app can show previously saved live data. It does not substitute demo records in live mode, and writes are never queued or reported as successful offline.
 
 The educational schema explorer is available to staff through a restricted RPC. Direct SQL execution is disabled in live mode. The legacy OOP test and code-bundle endpoints still require `VITE_API_BASE_URL`.
+
+## M-Pesa sandbox fine payments
+
+The member portal sends fine payments through Safaricom Daraja sandbox STK Push. The fine remains unpaid until the Supabase callback records a successful Daraja result; a request being sent to a phone is not treated as payment.
+
+1. Apply [`supabase/migrations/20261114_portal_payments_and_fines.sql`](./supabase/migrations/20261114_portal_payments_and_fines.sql) in the Supabase SQL Editor after the initial schema migration.
+2. Obtain Daraja **sandbox** consumer key, consumer secret, shortcode, and passkey from the Safaricom developer portal. In the Supabase Dashboard, open **Edge Functions → Secrets** and set these values (never add them to `VITE_` variables or source code):
+
+   ```text
+   MPESA_CONSUMER_KEY
+   MPESA_CONSUMER_SECRET
+   MPESA_SHORTCODE
+   MPESA_PASSKEY
+   MPESA_CALLBACK_TOKEN
+   ```
+
+   `MPESA_CALLBACK_TOKEN` must be a long random value. Supabase supplies `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions.
+3. Link the Supabase CLI to your project, then deploy both functions from the repository root:
+
+   ```powershell
+   supabase link --project-ref YOUR_PROJECT_REF
+   supabase functions deploy mpesa-stk
+   supabase functions deploy mpesa-callback
+   ```
+
+4. Test with Daraja sandbox-supported phone numbers and credentials. Sandbox prompts do not move real funds. Production payments require a separate production Daraja application and configuration.

@@ -165,6 +165,14 @@ const mockApi = {
     return data.success;
   },
 
+  async updateMemberDetails(_memberId: number, _details: { full_name: string; phone: string }): Promise<boolean> {
+    throw new Error('Editing member profiles is available when Supabase is enabled.');
+  },
+
+  async addMemberFine(_memberId: number, _amount: number, _reason: string): Promise<number> {
+    throw new Error('Adding account fines is available when Supabase is enabled.');
+  },
+
   // Auth
   async loginAdmin(email: string, password: string): Promise<Admin> {
     const res = await apiFetch('/api/login/admin', {
@@ -215,7 +223,7 @@ const mockApi = {
     return data.data;
   },
 
-  async returnBook(bookIdOrIsbn: string, condition: string = 'Good', damageFee: number = 0): Promise<any> {
+  async returnBook(bookIdOrIsbn: string, condition: string = 'Good', damageFee: number = 0, _borrowingId?: number): Promise<any> {
     const res = await apiFetch('/api/return', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -249,6 +257,10 @@ const mockApi = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Payment failed');
     return data.success;
+  },
+
+  async requestFinePayment(_fineId: number, _phone: string): Promise<{ message: string }> {
+    throw new Error('M-Pesa payments are available when Supabase and Daraja are configured.');
   },
 
   // Reservations
@@ -315,6 +327,10 @@ const mockApi = {
   },
 
   subscribeToMemberUpdates(): () => void {
+    return () => {};
+  },
+
+  subscribeToAdminUpdates(): () => void {
     return () => {};
   },
 };

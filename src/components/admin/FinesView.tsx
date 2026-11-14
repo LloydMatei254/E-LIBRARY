@@ -22,7 +22,15 @@ export const FinesView: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
+    let active = true;
+    void loadData();
+    const unsubscribe = api.subscribeToAdminUpdates(() => {
+      if (active) void loadData();
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   const notify = (text: string) => {
