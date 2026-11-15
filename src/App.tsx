@@ -80,10 +80,41 @@ export default function App() {
 
   useEffect(() => {
     if (isDemoMode || !isSupabaseConfigured) return;
+
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const queryParams = new URLSearchParams(window.location.search);
+    const authErrorDesc = hashParams.get('error_description') || queryParams.get('error_description');
+    if (authErrorDesc) {
+      setStartupError(authErrorDesc.replace(/\+/g, ' '));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     const { data: { subscription } } = getSupabaseClient().auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordRecovery(true);
         setIsMemberAuthOpen(true);
+        return;
+      }
+      if (event === 'SIGNED_IN') {
+        const isEmailCallback = window.location.hash.includes('access_token=')
+          || window.location.search.includes('code=');
+        if (!isEmailCallback) return;
+        void api.getCurrentAccount()
+          .then((account) => {
+            if (account.member) {
+              setMemberUser(account.member);
+              setIsMemberAuthOpen(false);
+              setCurrentView('member-portal');
+            } else if (account.admin) {
+              setAdminUser(account.admin);
+              setIsAdminAuthOpen(false);
+              setCurrentView('admin');
+            }
+            window.history.replaceState({}, document.title, window.location.pathname);
+          })
+          .catch((error: unknown) => {
+            console.error('Could not load account after verification.', error);
+          });
       }
     });
     if (window.location.hash.includes('type=recovery')) {

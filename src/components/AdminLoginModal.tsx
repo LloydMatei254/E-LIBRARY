@@ -77,14 +77,16 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
         onSuccess(result.admin);
         onClose();
       } else if (result.status === 'email_confirmation') {
+        setLoginEmail(regEmail.trim());
         setSuccess(
-          'Check your email for a confirmation link. Once confirmed and approved for staff access, return here to sign in.'
+          'Check your email for a verification link. Once confirmed and approved for staff access, return here to sign in.'
         );
         setRegName('');
         setRegEmail('');
         setRegPhone('');
         setRegPassword('');
       } else {
+        setLoginEmail(regEmail.trim());
         setSuccess(
           'Account created. Staff portal access requires an active admin role to be enabled on your profile before signing in.'
         );
@@ -113,6 +115,25 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
       setSuccess('If an account exists for that email, a password reset link will be sent.');
     } catch (err: any) {
       setError(err.message || 'Could not send the password reset email.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setError(null);
+    setSuccess(null);
+    const targetEmail = (loginEmail || regEmail).trim();
+    if (!targetEmail) {
+      setError('Enter your email address first.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.resendVerificationEmail(targetEmail);
+      setSuccess(`Verification email sent to ${targetEmail}. Open the link in your inbox, then sign in.`);
+    } catch (err: any) {
+      setError(err.message || 'Could not resend the verification email.');
     } finally {
       setLoading(false);
     }
@@ -259,14 +280,24 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                 </button>
 
                 {!isDemoMode && (
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={handlePasswordReset}
-                    className="text-[11px] font-medium text-indigo-600 hover:underline disabled:opacity-60"
-                  >
-                    Forgot password?
-                  </button>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={handlePasswordReset}
+                      className="text-[11px] font-medium text-indigo-600 hover:underline disabled:opacity-60"
+                    >
+                      Forgot password?
+                    </button>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={handleResendVerification}
+                      className="text-[11px] font-medium text-indigo-600 hover:underline disabled:opacity-60"
+                    >
+                      Resend verification email
+                    </button>
+                  </div>
                 )}
 
                 {isDemoMode && (

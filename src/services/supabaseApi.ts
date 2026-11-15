@@ -47,6 +47,9 @@ function throwIfLoginError(error: { message: string } | null) {
   if (/invalid login credentials/i.test(error.message)) {
     throw new Error('Wrong email or password.');
   }
+  if (/email not confirmed/i.test(error.message)) {
+    throw new Error('Your email is not verified yet. Check your inbox or click "Resend verification email" below.');
+  }
   throw new Error(formatSupabaseErrorMessage(error.message));
 }
 
@@ -801,7 +804,10 @@ export const supabaseApi = {
       const { data, error } = await client.auth.signUp({
         email: payload.email,
         password: payload.password,
-        options: { data: { full_name: payload.full_name, phone: payload.phone } },
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: { full_name: payload.full_name, phone: payload.phone },
+        },
       });
       throwIfError(error);
       if (!data.user || !data.session) return null;
@@ -825,6 +831,7 @@ export const supabaseApi = {
       email: payload.email.trim(),
       password: payload.password,
       options: {
+        emailRedirectTo: window.location.origin,
         data: {
           full_name: payload.full_name.trim(),
           phone: payload.phone.trim(),
@@ -860,6 +867,18 @@ export const supabaseApi = {
     requireNetworkForMutation();
     const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin,
+    });
+    throwIfError(error);
+  },
+
+  async resendVerificationEmail(email: string): Promise<void> {
+    requireNetworkForMutation();
+    const { error } = await getSupabaseClient().auth.resend({
+      type: 'signup',
+      email: email.trim(),
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
     });
     throwIfError(error);
   },

@@ -338,6 +338,10 @@ const mockApi = {
     throw new Error('Password reset is available when Supabase authentication is enabled.');
   },
 
+  async resendVerificationEmail(_email: string): Promise<void> {
+    throw new Error('Verification emails are available when Supabase authentication is enabled.');
+  },
+
   async updatePassword(_password: string): Promise<void> {
     throw new Error('Password reset is available when Supabase authentication is enabled.');
   },
