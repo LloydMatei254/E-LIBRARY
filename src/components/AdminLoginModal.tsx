@@ -40,6 +40,13 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
     setResetMode(isPasswordRecovery);
   }, [isPasswordRecovery]);
 
+  useEffect(() => {
+    if (isOpen) {
+      setError(null);
+      setSuccess(null);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -252,6 +259,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   <input
                     type="email"
                     required
+                    autoComplete="email"
                     placeholder="Enter your email"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
@@ -264,6 +272,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   <input
                     type="password"
                     required
+                    autoComplete="current-password"
                     placeholder="Enter your password"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
@@ -330,6 +339,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   <input
                     type="text"
                     required
+                    autoComplete="name"
                     placeholder="Enter full name"
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
@@ -342,6 +352,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   <input
                     type="email"
                     required
+                    autoComplete="email"
                     placeholder="Enter email address"
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
@@ -353,6 +364,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   <label className="block text-xs font-medium text-slate-700 mb-1">Phone number</label>
                   <input
                     type="tel"
+                    autoComplete="tel"
                     placeholder="Enter phone number"
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value)}
@@ -366,6 +378,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                     type="password"
                     required
                     minLength={8}
+                    autoComplete="new-password"
                     placeholder="Create password"
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}

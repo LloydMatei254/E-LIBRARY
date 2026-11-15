@@ -283,7 +283,7 @@ export default function App() {
                 onClick={() => setIsAdminAuthOpen(true)}
                 className="w-full py-2.5 px-4 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs"
               >
-                Sign in as Admin J. Mwangi
+                Open Staff Portal Login
               </button>
             </div>
           </div>
@@ -291,6 +291,7 @@ export default function App() {
             isOpen={isAdminAuthOpen}
             onClose={() => setIsAdminAuthOpen(false)}
             onSuccess={(admin) => {
+              setMemberUser(null);
               setAdminUser(admin);
               setCurrentView('admin');
             }}
@@ -479,6 +480,7 @@ export default function App() {
           setCurrentView('landing');
         }}
         onSuccess={(member) => {
+          setAdminUser(null);
           setMemberUser(member);
           setReturnToMemberPortal(false);
           setCurrentView('member-portal');
@@ -489,6 +491,7 @@ export default function App() {
         isOpen={isAdminAuthOpen}
         onClose={() => setIsAdminAuthOpen(false)}
         onSuccess={(admin) => {
+          setMemberUser(null);
           setAdminUser(admin);
           setCurrentView('admin');
         }}

@@ -772,13 +772,17 @@ export const supabaseApi = {
   async loginAdmin(email: string, password: string): Promise<Admin> {
     requireNetworkForMutation();
     const client = getSupabaseClient();
-    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    const { data, error } = await client.auth.signInWithPassword({ email: email.trim(), password });
     throwIfLoginError(error);
     if (!data.user) throw new Error('Staff sign-in did not return a user.');
     const profile = await profileForSession(data.user.id);
     if (profile.role === 'member' || profile.status !== 'active') {
       await client.auth.signOut({ scope: 'local' });
-      throw new Error('An active staff profile is required for staff sign-in.');
+      throw new Error(
+        profile.role === 'member'
+          ? 'This account is currently registered as a member. Enable a staff/admin role for this profile in Supabase before signing in to the Staff Portal.'
+          : 'This staff account is not active.',
+      );
     }
     return mapAdmin(profile);
   },
@@ -786,7 +790,7 @@ export const supabaseApi = {
   async loginMember(email: string, password: string): Promise<Member> {
     requireNetworkForMutation();
     const client = getSupabaseClient();
-    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    const { data, error } = await client.auth.signInWithPassword({ email: email.trim(), password });
     throwIfLoginError(error);
     if (!data.user) throw new Error('Member sign-in did not return a user.');
     const profile = await profileForSession(data.user.id);
