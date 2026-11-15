@@ -3,7 +3,13 @@ import { Search, Edit2, Trash2, X, AlertCircle, CheckCircle2, BookOpen, Upload, 
 import { Book, Category } from '../types';
 import { api } from '../services/api';
 import { isDemoMode } from '../services/supabaseClient';
-import { mockBooks } from '../data/mockBooks';
+import { mockBooks, mockCategories } from '../data/mockBooks';
+
+const notifyCatalogueUpdated = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('library:catalogue-updated'));
+  }
+};
 
 export const ManageBooks: React.FC = () => {
   const [books, setBooks] = useState<Book[]>([]);
@@ -23,7 +29,9 @@ export const ManageBooks: React.FC = () => {
   const [formIsbn, setFormIsbn] = useState('');
   const [formAuthors, setFormAuthors] = useState('');
   const [formPublisher, setFormPublisher] = useState('');
-  const [formCategoryId, setFormCategoryId] = useState<number>(1);
+  const [formCategoryId, setFormCategoryId] = useState<number>(0);
+  const [creatingNewCategory, setCreatingNewCategory] = useState(false);
+  const [formNewCategoryName, setFormNewCategoryName] = useState('');
   const [formYear, setFormYear] = useState<number>(2024);
   const [formLanguage, setFormLanguage] = useState('English');
   const [formPages, setFormPages] = useState<number>(250);
@@ -35,8 +43,8 @@ export const ManageBooks: React.FC = () => {
   const [coverPreviewUrl, setCoverPreviewUrl] = useState('');
   const [uploadedCover, setUploadedCover] = useState<{ file: File; categoryId: number; url: string } | null>(null);
   const [savingBook, setSavingBook] = useState(false);
-  const [importingDemoCovers, setImportingDemoCovers] = useState(false);
-  const [demoCoverProgress, setDemoCoverProgress] = useState<{ completed: number; total: number } | null>(null);
+  const [importingStarterCatalogue, setImportingStarterCatalogue] = useState(false);
+  const [starterImportProgress, setStarterImportProgress] = useState<{ completed: number; total: number } | null>(null);
 
   useEffect(() => {
     return () => {
@@ -78,12 +86,15 @@ export const ManageBooks: React.FC = () => {
   };
 
   const openAddModal = () => {
+    setError(null);
     setEditingBook(null);
     setFormTitle('');
     setFormIsbn(`978-0-00-${Math.floor(10000 + Math.random() * 90000)}`);
     setFormAuthors('');
     setFormPublisher('');
-    setFormCategoryId(categories[0]?.category_id || 1);
+    setFormCategoryId(categories[0]?.category_id || 0);
+    setCreatingNewCategory(categories.length === 0);
+    setFormNewCategoryName('');
     setFormYear(2024);
     setFormLanguage('English');
     setFormPages(320);
@@ -98,12 +109,15 @@ export const ManageBooks: React.FC = () => {
   };
 
   const openEditModal = (book: Book) => {
+    setError(null);
     setEditingBook(book);
     setFormTitle(book.title);
     setFormIsbn(book.isbn);
     setFormAuthors(book.authors?.join(', ') || '');
     setFormPublisher(book.publisher || '');
     setFormCategoryId(book.category_id);
+    setCreatingNewCategory(false);
+    setFormNewCategoryName('');
     setFormYear(book.publication_year || 2024);
     setFormLanguage(book.language || 'English');
     setFormPages(book.pages || 250);
@@ -143,15 +157,35 @@ export const ManageBooks: React.FC = () => {
     setError(null);
     setSavingBook(true);
     try {
+      let resolvedCategoryId = Number(formCategoryId);
+      if (creatingNewCategory || categories.length === 0 || !Number.isInteger(resolvedCategoryId) || resolvedCategoryId < 1) {
+        const cleanCategoryName = formNewCategoryName.trim();
+        if (!cleanCategoryName) {
+          throw new Error('Create or select a book category before saving.');
+        }
+        const existing = categories.find(
+          (category) => category.category_name.trim().toLocaleLowerCase() === cleanCategoryName.toLocaleLowerCase(),
+        );
+        if (existing) {
+          resolvedCategoryId = existing.category_id;
+        } else {
+          const createdCategory = await api.addCategory(cleanCategoryName);
+          resolvedCategoryId = createdCategory.category_id;
+          setCategories((prev) => [...prev, createdCategory].sort((a, b) => a.category_name.localeCompare(b.category_name)));
+          setFormCategoryId(createdCategory.category_id);
+          setCreatingNewCategory(false);
+          setFormNewCategoryName('');
+        }
+      }
+
       let coverImage = formCoverImage;
       if (coverFile) {
-        const categoryId = Number(formCategoryId);
-        const uploadedUrl = uploadedCover?.file === coverFile && uploadedCover.categoryId === categoryId
+        const uploadedUrl = uploadedCover?.file === coverFile && uploadedCover.categoryId === resolvedCategoryId
           ? uploadedCover.url
-          : await api.uploadBookCover(coverFile, categoryId);
+          : await api.uploadBookCover(coverFile, resolvedCategoryId);
         coverImage = uploadedUrl;
         setFormCoverImage(uploadedUrl);
-        setUploadedCover({ file: coverFile, categoryId, url: uploadedUrl });
+        setUploadedCover({ file: coverFile, categoryId: resolvedCategoryId, url: uploadedUrl });
       }
 
       const payload = {
@@ -159,7 +193,7 @@ export const ManageBooks: React.FC = () => {
         isbn: formIsbn,
         authors: formAuthors.split(',').map((a) => a.trim()).filter((a) => a.length > 0),
         publisher: formPublisher,
-        category_id: Number(formCategoryId),
+        category_id: resolvedCategoryId,
         publication_year: Number(formYear),
         language: formLanguage,
         pages: Number(formPages),
@@ -181,7 +215,8 @@ export const ManageBooks: React.FC = () => {
       setCoverFile(null);
       setCoverPreviewUrl('');
       setUploadedCover(null);
-      loadData();
+      await loadData();
+      notifyCatalogueUpdated();
     } catch (err: any) {
       setError(err.message || 'Operation failed');
     } finally {
@@ -189,94 +224,128 @@ export const ManageBooks: React.FC = () => {
     }
   };
 
-  const handleImportDemoCovers = async () => {
-    const demoCovers = mockBooks.filter((book) => book.cover_image?.trim());
-    if (!confirm(`Import ${demoCovers.length} demo covers into Supabase Storage for matching books?`)) return;
+  const tryUploadRemoteCover = async (sourceUrl: string, bookId: number, categoryId: number): Promise<string> => {
+    try {
+      const response = await fetch(sourceUrl);
+      if (!response.ok) return sourceUrl;
+      const blob = await response.blob();
+      const contentType = blob.type.split(';')[0].toLocaleLowerCase();
+      const extensionByType: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+      };
+      const extension = extensionByType[contentType];
+      if (!extension) return sourceUrl;
+
+      const file = new File([blob], `${bookId}.${extension}`, { type: contentType });
+      return await api.uploadBookCover(file, categoryId);
+    } catch {
+      return sourceUrl;
+    }
+  };
+
+  const handleImportStarterCatalogue = async () => {
+    if (!confirm(`Import starter categories and ${mockBooks.length} starter books into your live Supabase catalogue?`)) return;
 
     setError(null);
-    setImportingDemoCovers(true);
-    setDemoCoverProgress({ completed: 0, total: demoCovers.length });
-    let imported = 0;
+    setImportingStarterCatalogue(true);
+    setStarterImportProgress({ completed: 0, total: mockBooks.length });
+    let createdBooks = 0;
+    let updatedCovers = 0;
     let skipped = 0;
-    let missingCatalogueEntries = 0;
-    let alreadyStored = 0;
-    let preservedCustomCovers = 0;
     const failures: string[] = [];
     const normalize = (value: string) => value.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
 
     try {
-      const [liveBooks, liveCategories] = await Promise.all([api.getBooks(), api.getCategories()]);
+      const [initialBooks, initialCategories] = await Promise.all([api.getBooks(), api.getCategories()]);
+      const categoryByName = new Map(
+        initialCategories.map((category) => [normalize(category.category_name), category]),
+      );
 
-      for (const demoBook of demoCovers) {
+      for (const starterCategory of mockCategories) {
+        const key = normalize(starterCategory.category_name);
+        if (!categoryByName.has(key)) {
+          const created = await api.addCategory(starterCategory.category_name, starterCategory.description);
+          categoryByName.set(key, created);
+        }
+      }
+
+      for (const demoBook of mockBooks) {
         try {
-          const sourceUrl = demoBook.cover_image?.trim();
-          if (!sourceUrl) throw new Error('Demo cover URL is missing.');
+          const liveCategory = categoryByName.get(normalize(demoBook.category_name ?? ''));
+          if (!liveCategory) {
+            throw new Error(`Category "${demoBook.category_name ?? 'Uncategorized'}" could not be resolved.`);
+          }
 
-          const liveBook = liveBooks.find((book) => normalize(book.title) === normalize(demoBook.title));
-          const liveCategory = liveCategories.find(
-            (category) => normalize(category.category_name) === normalize(demoBook.category_name ?? ''),
+          const liveBook = initialBooks.find(
+            (book) => normalize(book.isbn) === normalize(demoBook.isbn)
+              || normalize(book.title) === normalize(demoBook.title),
           );
-          if (!liveBook || !liveCategory) {
-            skipped += 1;
-            missingCatalogueEntries += 1;
-            continue;
-          }
+          const sourceUrl = demoBook.cover_image?.trim() ?? '';
 
-          if (liveBook.cover_image?.includes('/storage/v1/object/public/book-covers/')) {
+          if (!liveBook) {
+            const coverUrl = sourceUrl
+              ? await tryUploadRemoteCover(sourceUrl, demoBook.book_id, liveCategory.category_id)
+              : '';
+            await api.addBook({
+              isbn: demoBook.isbn,
+              title: demoBook.title,
+              authors: demoBook.authors,
+              publisher: demoBook.publisher,
+              category_id: liveCategory.category_id,
+              publication_year: demoBook.publication_year,
+              language: demoBook.language,
+              pages: demoBook.pages,
+              total_copies: demoBook.total_copies,
+              shelf_location: demoBook.shelf_location,
+              description: demoBook.description,
+              cover_image: coverUrl,
+            });
+            createdBooks += 1;
+          } else if (
+            sourceUrl
+            && !liveBook.cover_image?.includes('/storage/v1/object/public/book-covers/')
+            && (!liveBook.cover_image || liveBook.cover_image === sourceUrl)
+          ) {
+            const uploadedUrl = await tryUploadRemoteCover(sourceUrl, demoBook.book_id, liveCategory.category_id);
+            if (uploadedUrl !== liveBook.cover_image) {
+              await api.updateBook(liveBook.book_id, { ...liveBook, cover_image: uploadedUrl });
+              updatedCovers += 1;
+            } else {
+              skipped += 1;
+            }
+          } else {
             skipped += 1;
-            alreadyStored += 1;
-            continue;
           }
-          if (liveBook.cover_image && liveBook.cover_image !== sourceUrl) {
-            skipped += 1;
-            preservedCustomCovers += 1;
-            continue;
-          }
-
-          const response = await fetch(sourceUrl);
-          if (!response.ok) throw new Error(`Cover download failed (${response.status}).`);
-          const blob = await response.blob();
-          const contentType = blob.type.split(';')[0].toLocaleLowerCase();
-          const extensionByType: Record<string, string> = {
-            'image/jpeg': 'jpg',
-            'image/png': 'png',
-            'image/webp': 'webp',
-          };
-          const extension = extensionByType[contentType];
-          if (!extension) throw new Error('The source did not return a supported image format.');
-
-          const file = new File([blob], `${demoBook.book_id}.${extension}`, { type: contentType });
-          const coverUrl = await api.uploadBookCover(file, liveCategory.category_id);
-          await api.updateBook(liveBook.book_id, { ...liveBook, cover_image: coverUrl });
-          imported += 1;
         } catch (err) {
           failures.push(`${demoBook.title}: ${err instanceof Error ? err.message : 'Import failed.'}`);
         } finally {
-          setDemoCoverProgress((progress) => progress
+          setStarterImportProgress((progress) => progress
             ? { ...progress, completed: progress.completed + 1 }
             : progress);
         }
       }
 
-      loadData();
+      await loadData();
+      notifyCatalogueUpdated();
       if (failures.length > 0) {
         const details = failures.slice(0, 3).join(' ');
         const remaining = failures.length > 3 ? ` Plus ${failures.length - 3} more.` : '';
-        setError(`Imported ${imported}; skipped ${skipped}; failed ${failures.length}. ${details}${remaining}`);
+        setError(`Added ${createdBooks} books and updated ${updatedCovers} covers; skipped ${skipped}; failed ${failures.length}. ${details}${remaining}`);
       } else {
         const summary = [
-          `Imported ${imported} of ${demoCovers.length} demo covers.`,
-          missingCatalogueEntries ? `${missingCatalogueEntries} skipped because the matching live book or category is missing.` : '',
-          alreadyStored ? `${alreadyStored} already use Storage covers.` : '',
-          preservedCustomCovers ? `${preservedCustomCovers} custom covers were left unchanged.` : '',
-        ].filter(Boolean).join(' ');
+          createdBooks > 0 ? `Added ${createdBooks} starter books to the catalogue.` : '',
+          updatedCovers > 0 ? `Updated ${updatedCovers} book covers.` : '',
+          skipped > 0 ? `${skipped} existing titles already up to date.` : '',
+        ].filter(Boolean).join(' ') || 'Starter catalogue is up to date.';
         notify(summary);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not import demo covers.');
+      setError(err instanceof Error ? err.message : 'Could not import starter catalogue.');
     } finally {
-      setImportingDemoCovers(false);
-      setDemoCoverProgress(null);
+      setImportingStarterCatalogue(false);
+      setStarterImportProgress(null);
     }
   };
 
@@ -285,7 +354,8 @@ export const ManageBooks: React.FC = () => {
     try {
       await api.deleteBook(bookId);
       notify(`Book "${title}" deleted.`);
-      loadData();
+      await loadData();
+      notifyCatalogueUpdated();
     } catch (err: any) {
       setError(err.message || 'Failed to delete book');
     }
@@ -314,15 +384,15 @@ export const ManageBooks: React.FC = () => {
         <div className="flex items-center gap-2">
           {!isDemoMode && (
             <button
-              onClick={handleImportDemoCovers}
-              disabled={importingDemoCovers}
+              onClick={handleImportStarterCatalogue}
+              disabled={importingStarterCatalogue}
               className="px-3.5 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-60"
             >
               <Download className="w-4 h-4" />
               <span>
-                {importingDemoCovers && demoCoverProgress
-                  ? `Importing ${demoCoverProgress.completed}/${demoCoverProgress.total}...`
-                  : 'Import demo covers'}
+                {importingStarterCatalogue && starterImportProgress
+                  ? `Importing ${starterImportProgress.completed}/${starterImportProgress.total}...`
+                  : 'Import starter books & covers'}
               </span>
             </button>
           )}
@@ -409,8 +479,39 @@ export const ManageBooks: React.FC = () => {
                 </tr>
               ) : books.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-slate-400">
-                    No books found. Click "Add New Book" to create one.
+                  <td colSpan={7} className="text-center py-10 px-4 text-slate-500">
+                    <div className="max-w-md mx-auto space-y-3">
+                      <p className="font-medium text-slate-700">
+                        No books found in the live catalogue yet.
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        Import the 15 starter academic books &amp; categories in one click, or add a book manually.
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                        {!isDemoMode && (
+                          <button
+                            type="button"
+                            onClick={handleImportStarterCatalogue}
+                            disabled={importingStarterCatalogue}
+                            className="px-3.5 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors inline-flex items-center gap-1.5 disabled:opacity-60"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span>
+                              {importingStarterCatalogue && starterImportProgress
+                                ? `Importing ${starterImportProgress.completed}/${starterImportProgress.total}...`
+                                : 'Import 15 starter books'}
+                            </span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={openAddModal}
+                          className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+                        >
+                          Add New Book
+                        </button>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -494,6 +595,18 @@ export const ManageBooks: React.FC = () => {
               </h2>
             </div>
 
+            {error && (
+              <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+                <button type="button" onClick={() => setError(null)} className="font-semibold underline shrink-0">
+                  Dismiss
+                </button>
+              </div>
+            )}
+
             <form onSubmit={handleSaveBook} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Book Title */}
@@ -561,8 +674,17 @@ export const ManageBooks: React.FC = () => {
                     Category *
                   </label>
                   <select
-                    value={formCategoryId}
-                    onChange={(e) => setFormCategoryId(Number(e.target.value))}
+                    value={creatingNewCategory || categories.length === 0 ? '__new__' : String(formCategoryId)}
+                    onChange={(e) => {
+                      if (e.target.value === '__new__') {
+                        setCreatingNewCategory(true);
+                        setFormCategoryId(0);
+                      } else {
+                        setCreatingNewCategory(false);
+                        setFormNewCategoryName('');
+                        setFormCategoryId(Number(e.target.value));
+                      }
+                    }}
                     className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                   >
                     {categories.map((c) => (
@@ -570,7 +692,18 @@ export const ManageBooks: React.FC = () => {
                         {c.category_name}
                       </option>
                     ))}
+                    <option value="__new__">+ Create new category...</option>
                   </select>
+                  {(creatingNewCategory || categories.length === 0) && (
+                    <input
+                      type="text"
+                      required
+                      placeholder="Enter new category name (e.g. Technology)"
+                      value={formNewCategoryName}
+                      onChange={(e) => setFormNewCategoryName(e.target.value)}
+                      className="mt-2 w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-indigo-50/30"
+                    />
+                  )}
                 </div>
 
                 {/* Publication Year */}

@@ -46,14 +46,21 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const fetchBooks = async () => {
+  const fetchBooks = async (overrides?: {
+    search?: string;
+    categoryId?: number | null;
+    availability?: 'all' | 'available' | 'unavailable';
+  }) => {
+    const activeSearch = overrides && 'search' in overrides ? (overrides.search ?? '') : searchQuery;
+    const activeCategory = overrides && 'categoryId' in overrides ? overrides.categoryId : selectedCategory;
+    const activeAvailability = overrides?.availability ?? availabilityFilter;
     setLoading(true);
     setError(null);
     try {
       const data = await api.getBooks({
-        search: searchQuery || undefined,
-        category_id: selectedCategory || undefined,
-        available_only: availabilityFilter === 'available',
+        search: activeSearch || undefined,
+        category_id: activeCategory || undefined,
+        available_only: activeAvailability === 'available',
       });
       setBooks(data);
     } catch (err: any) {
@@ -76,6 +83,11 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
       }
     };
     init();
+    const handleCatalogueUpdate = () => {
+      void init();
+    };
+    window.addEventListener('library:catalogue-updated', handleCatalogueUpdate);
+    return () => window.removeEventListener('library:catalogue-updated', handleCatalogueUpdate);
   }, []);
 
   const handleApplyFilters = () => {
@@ -141,7 +153,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
             <button
               onClick={() => {
                 setSearchQuery('');
-                setTimeout(() => fetchBooks(), 50);
+                void fetchBooks({ search: '' });
               }}
               className="text-blue-800 hover:underline font-bold ml-1"
             >
@@ -274,7 +286,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
                   setSearchQuery('');
                   setSelectedCategory(null);
                   setAvailabilityFilter('all');
-                  fetchBooks();
+                  void fetchBooks({ search: '', categoryId: null, availability: 'all' });
                 }}
                 className="mt-4 px-3.5 py-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 border border-indigo-200 rounded-lg"
               >

@@ -41,7 +41,8 @@ export const CategoriesView: React.FC = () => {
       setName('');
       setDesc('');
       setIsModalOpen(false);
-      loadCategories();
+      await loadCategories();
+      window.dispatchEvent(new CustomEvent('library:catalogue-updated'));
     } catch (err: any) {
       setError(err.message || 'Failed to add category');
     }
@@ -52,7 +53,8 @@ export const CategoriesView: React.FC = () => {
     try {
       await api.deleteCategory(cat.category_id);
       notify(`Category "${cat.category_name}" deleted.`);
-      loadCategories();
+      await loadCategories();
+      window.dispatchEvent(new CustomEvent('library:catalogue-updated'));
     } catch (err: any) {
       setError(err.message || 'Cannot delete category with associated books');
     }

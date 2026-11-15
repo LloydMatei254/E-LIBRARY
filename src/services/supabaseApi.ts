@@ -366,15 +366,29 @@ async function profileForSession(authUserId: string): Promise<ProfileRow> {
 }
 
 function buildBookPayload(bookData: Partial<Book>): Json {
+  const year = typeof bookData.publication_year === 'number' && Number.isFinite(bookData.publication_year)
+    && bookData.publication_year >= 1000 && bookData.publication_year <= 2100
+    ? Math.trunc(bookData.publication_year)
+    : null;
+  const pages = typeof bookData.pages === 'number' && Number.isFinite(bookData.pages) && bookData.pages > 0
+    ? Math.trunc(bookData.pages)
+    : null;
+  const totalCopies = typeof bookData.total_copies === 'number' && Number.isFinite(bookData.total_copies)
+    ? Math.max(1, Math.trunc(bookData.total_copies))
+    : 1;
+  const categoryId = typeof bookData.category_id === 'number' && Number.isInteger(bookData.category_id) && bookData.category_id > 0
+    ? bookData.category_id
+    : null;
+
   return {
-    isbn: bookData.isbn ?? '',
-    title: bookData.title ?? '',
-    category_id: bookData.category_id ?? null,
+    isbn: (bookData.isbn ?? '').trim(),
+    title: (bookData.title ?? '').trim(),
+    category_id: categoryId,
     publisher: bookData.publisher ?? '',
-    publication_year: bookData.publication_year ?? null,
+    publication_year: year,
     language: bookData.language ?? 'English',
-    pages: bookData.pages ?? null,
-    total_copies: bookData.total_copies ?? 1,
+    pages,
+    total_copies: totalCopies,
     shelf_location: bookData.shelf_location ?? '',
     description: bookData.description ?? '',
     cover_image: bookData.cover_image ?? '',

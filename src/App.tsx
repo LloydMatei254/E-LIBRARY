@@ -127,6 +127,17 @@ export default function App() {
   useEffect(() => {
     if (isDemoMode) return;
     let active = true;
+    const refreshCatalogue = () =>
+      Promise.all([api.getBooks(), api.getCategories()])
+        .then(([liveBooks, liveCategories]) => {
+          if (!active) return;
+          setBooks(liveBooks);
+          setCategories(liveCategories);
+        })
+        .catch((error: unknown) => {
+          console.error('Could not refresh the live library catalogue.', error);
+        });
+
     Promise.all([api.getBooks(), api.getCategories(), api.getCurrentAccount()])
       .then(([liveBooks, liveCategories, account]) => {
         if (!active) return;
@@ -143,8 +154,11 @@ export default function App() {
           setStartupError(error instanceof Error ? error.message : 'The live library could not be initialized.');
         }
       });
+
+    window.addEventListener('library:catalogue-updated', refreshCatalogue);
     return () => {
       active = false;
+      window.removeEventListener('library:catalogue-updated', refreshCatalogue);
     };
   }, []);
 
