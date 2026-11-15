@@ -11,6 +11,7 @@ import {
   FileText,
   Settings,
   ArrowLeft,
+  UserPlus,
 } from 'lucide-react';
 
 export type AdminTab =
@@ -19,6 +20,7 @@ export type AdminTab =
   | 'categories'
   | 'authors'
   | 'members'
+  | 'staff'
   | 'circulation'
   | 'reservations'
   | 'fines'
@@ -28,6 +30,7 @@ export type AdminTab =
 interface AdminSidebarProps {
   currentTab: AdminTab;
   onSelectTab: (tab: AdminTab) => void;
+  canManageStaff: boolean;
   onExitToCatalogue: () => void;
   onOpenDefense: () => void;
 }
@@ -35,6 +38,7 @@ interface AdminSidebarProps {
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   currentTab,
   onSelectTab,
+  canManageStaff,
   onExitToCatalogue,
   onOpenDefense,
 }) => {
@@ -113,6 +117,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           <Users className="w-4 h-4 shrink-0 text-indigo-300" />
           <span>Members</span>
         </button>
+
+        {canManageStaff && (
+          <button
+            onClick={() => onSelectTab('staff')}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-left transition-colors font-medium ${
+              currentTab === 'staff'
+                ? 'bg-[#311f5e] text-white shadow-xs'
+                : 'text-indigo-100/75 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <UserPlus className="w-4 h-4 shrink-0 text-indigo-300" />
+            <span>Staff accounts</span>
+          </button>
+        )}
 
         {/* Operations Section Header */}
         <div className="pt-6 pb-2 px-3.5">

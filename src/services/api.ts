@@ -207,6 +207,10 @@ const mockApi = {
     return data.member;
   },
 
+  async createStaffAccount(_payload: { full_name: string; email: string; phone: string; password: string }): Promise<{ full_name: string; email: string; role: 'librarian' }> {
+    throw new Error('Staff account creation requires Supabase live mode.');
+  },
+
   // Issue & Return
   async issueBook(memberIdOrEmail: string, bookIdOrIsbn: string, adminId: number = 1): Promise<any> {
     const res = await apiFetch('/api/issue', {

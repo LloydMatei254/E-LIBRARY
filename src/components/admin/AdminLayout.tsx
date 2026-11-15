@@ -3,6 +3,7 @@ import { AdminSidebar, AdminTab } from './AdminSidebar';
 import { AdminDashboard } from '../AdminDashboard';
 import { ManageBooks } from '../ManageBooks';
 import { ManageMembers } from '../ManageMembers';
+import { ManageStaff } from '../ManageStaff';
 import { IssueReturnDesk } from '../IssueReturnDesk';
 import { CategoriesView } from './CategoriesView';
 import { AuthorsView } from './AuthorsView';
@@ -36,6 +37,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
       <AdminSidebar
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
+        canManageStaff={adminUser.role === 'super_admin'}
         onExitToCatalogue={onExitToCatalogue}
         onOpenDefense={onOpenDefense}
       />
@@ -76,6 +78,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           {currentTab === 'authors' && <AuthorsView />}
 
           {currentTab === 'members' && <ManageMembers />}
+
+          {currentTab === 'staff' && adminUser.role === 'super_admin' && <ManageStaff />}
 
           {currentTab === 'circulation' && <IssueReturnDesk />}
 

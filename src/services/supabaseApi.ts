@@ -782,6 +782,16 @@ export const supabaseApi = {
     return mapMember(data);
   },
 
+  async createStaffAccount(payload: { full_name: string; email: string; phone: string; password: string }): Promise<{ full_name: string; email: string; role: 'librarian' }> {
+    requireNetworkForMutation();
+    const { data, error } = await getSupabaseClient().functions.invoke<{
+      staff: { full_name: string; email: string; role: 'librarian' };
+    }>('create-staff-account', { body: payload });
+    throwIfError(error);
+    if (!data?.staff) throw new Error('The staff account could not be created.');
+    return data.staff;
+  },
+
   async sendPasswordReset(email: string): Promise<void> {
     requireNetworkForMutation();
     const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email, {

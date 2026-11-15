@@ -23,7 +23,7 @@ The application supports a local demo mode and a Supabase-backed live mode. Live
    Never put a `service_role` key in a `VITE_` variable or in browser code.
 3. Restart the local server. In Vercel, add the same three `VITE_` variables to the project’s Environment Variables and redeploy. Set `VITE_DEMO_MODE` to exactly `false` for live data.
 4. Configure Supabase Auth’s site URL and redirect URLs for the local app and deployed domain. Keep email confirmation enabled so existing member profiles are only linked after the member proves control of their email.
-5. To give a staff account access, first create/sign up the account, then promote its matching profile from the Supabase SQL Editor:
+5. To bootstrap the first super admin, create/confirm its Auth account, then promote its matching profile from the Supabase SQL Editor:
 
    ```sql
    update public.profiles
@@ -31,7 +31,13 @@ The application supports a local demo mode and a Supabase-backed live mode. Live
    where lower(email) = lower('staff@example.com');
    ```
 
-   Repeat with `role = 'librarian'` for a librarian account. Do not expose role changes through the member-facing app.
+   Keep this SQL bootstrap private; do not expose role changes through the member-facing app. After the first super admin is active, that account can create librarian accounts in **Admin → Staff accounts**. Deploy the `create-staff-account` Edge Function for this feature:
+
+   ```powershell
+   supabase functions deploy create-staff-account
+   ```
+
+   New staff accounts are confirmed and assigned the librarian role. Share the temporary password securely and ask each staff member to change it after signing in.
 
 The migration also creates a public `book-covers` Storage bucket. Staff can select a JPEG, PNG, or WebP cover in the book form; uploaded files are stored under `categories/<category_id>/` and the public URL is saved with the book. Images are limited to 5 MB each and 50 per category, enforced by Storage policies. In demo mode, cover images can be set using a URL instead.
 
