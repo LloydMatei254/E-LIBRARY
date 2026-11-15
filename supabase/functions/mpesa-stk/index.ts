@@ -1,3 +1,4 @@
+// @ts-ignore - Supabase's JS runtime package is provided at runtime by Deno edge functions.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
