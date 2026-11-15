@@ -1,53 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Users, Clock, AlertTriangle, ArrowUpRight, CheckCircle2, TrendingUp, Database } from 'lucide-react';
+import { BookOpen, Users, Clock, AlertTriangle, ArrowUpRight, CheckCircle2, TrendingUp } from 'lucide-react';
 import { DashboardMetrics, Admin } from '../types';
 import { api } from '../services/api';
-
-const schemaTables = [
-  {
-    name: 'admins',
-    storage: 'Logical staff records · public.profiles',
-    fields: [
-      ['admin_id', 'bigint', 'PK · identity (member_id)'],
-      ['full_name', 'text', 'NOT NULL'],
-      ['email', 'text', 'NOT NULL · UNIQUE'],
-      ['role', 'text', 'NOT NULL · librarian or super_admin'],
-      ['password_hash', '—', 'Handled by Supabase Auth; not in the library table'],
-      ['created_at', 'timestamptz', 'Maps to registered_at · DEFAULT now()'],
-    ],
-  },
-  {
-    name: 'members',
-    storage: 'Logical member records · public.profiles',
-    fields: [
-      ['member_id', 'bigint', 'PK · identity'],
-      ['full_name', 'text', 'NOT NULL'],
-      ['email', 'text', 'NOT NULL · UNIQUE'],
-      ['phone', 'text', "DEFAULT '' · can be empty"],
-      ['password_hash', '—', 'Handled by Supabase Auth; not in the library table'],
-      ['status', 'text', "NOT NULL · active, suspended, or inactive · DEFAULT 'active'"],
-      ['registered_at', 'timestamptz', 'NOT NULL · DEFAULT now()'],
-    ],
-  },
-  {
-    name: 'categories',
-    storage: 'Physical table · public.categories',
-    fields: [
-      ['category_id', 'bigint', 'PK · identity'],
-      ['category_name', 'text', 'NOT NULL · UNIQUE'],
-      ['description', 'text', "NOT NULL · DEFAULT ''"],
-    ],
-  },
-  {
-    name: 'authors',
-    storage: 'Physical table · public.authors',
-    fields: [
-      ['author_id', 'bigint', 'PK · identity'],
-      ['author_name', 'text', 'NOT NULL · UNIQUE'],
-      ['biography', 'text', "NOT NULL · DEFAULT ''"],
-    ],
-  },
-] as const;
 
 interface AdminDashboardProps {
   adminUser: Admin;
@@ -353,54 +307,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
         </div>
       </div>
 
-      <section className="space-y-4" aria-labelledby="database-schema-heading">
-        <div>
-          <div className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-indigo-700" />
-            <h2 id="database-schema-heading" className="text-sm font-bold uppercase tracking-wider text-slate-900">
-              Database schema
-            </h2>
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
-            Supabase PostgreSQL core tables and constraints. Staff and member accounts share <code>public.profiles</code> and are distinguished by role; credentials are managed by Supabase Auth.
-          </p>
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-2">
-          {schemaTables.map((table) => (
-            <article key={table.name} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
-              <header className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                <h3 className="font-mono text-sm font-bold text-indigo-900">{table.name}</h3>
-                <p className="mt-0.5 text-[11px] text-slate-500">{table.storage}</p>
-              </header>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-xs">
-                  <thead className="text-[10px] uppercase tracking-wider text-slate-500">
-                    <tr>
-                      <th className="px-4 py-2 font-semibold">Column</th>
-                      <th className="px-4 py-2 font-semibold">PostgreSQL type</th>
-                      <th className="px-4 py-2 font-semibold">Key / constraints</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {table.fields.map(([column, type, constraints]) => (
-                      <tr key={column}>
-                        <td className="whitespace-nowrap px-4 py-2 font-mono font-medium text-slate-800">{column}</td>
-                        <td className="whitespace-nowrap px-4 py-2 font-mono text-slate-600">{type}</td>
-                        <td className="px-4 py-2 text-slate-600">{constraints}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <p className="rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-xs text-indigo-900">
-          Relationships: one category has many books; books and authors connect through <code>book_authors</code>; members borrow and reserve books; staff are recorded on loans through <code>issued_by</code>.
-        </p>
-      </section>
     </div>
   );
 };
