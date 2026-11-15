@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ShieldAlert, ArrowRight, AlertCircle, KeyRound } from 'lucide-react';
+import { X, ShieldAlert, AlertCircle, KeyRound } from 'lucide-react';
 import { Admin } from '../types';
 import { api } from '../services/api';
 import { isDemoMode } from '../services/supabaseClient';
@@ -99,8 +99,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
             disabled={loading}
             className="w-full py-2.5 px-4 mt-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs disabled:opacity-60"
           >
-            <ArrowRight className="w-3.5 h-3.5" />
-            <span>{loading ? 'Authenticating...' : '-> sign in'}</span>
+            <span>{loading ? 'Authenticating...' : 'Sign in'}</span>
           </button>
 
           {isDemoMode && <div className="pt-2 text-center">

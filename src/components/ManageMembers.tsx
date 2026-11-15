@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, UserCheck, UserX, X, AlertCircle, CheckCircle2, Shield } from 'lucide-react';
+import { Search, UserCheck, UserX, X, AlertCircle, CheckCircle2, Shield } from 'lucide-react';
 import { Member } from '../types';
 import { api } from '../services/api';
 
@@ -164,8 +164,7 @@ export const ManageMembers: React.FC = () => {
           onClick={() => setIsAddModalOpen(true)}
           className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-xs"
         >
-          <Plus className="w-4 h-4" />
-          <span>+ Add Member</span>
+          <span>Add Member</span>
         </button>
       </div>
 

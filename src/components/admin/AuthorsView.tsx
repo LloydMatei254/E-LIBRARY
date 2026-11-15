@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Plus, Trash2, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { UserCheck, Trash2, X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Author } from '../../types';
 import { api } from '../../services/api';
 
@@ -78,8 +78,7 @@ export const AuthorsView: React.FC = () => {
           onClick={() => setIsModalOpen(true)}
           className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
         >
-          <Plus className="w-4 h-4" />
-          <span>+ Add Author</span>
+          <span>Add Author</span>
         </button>
       </div>
 

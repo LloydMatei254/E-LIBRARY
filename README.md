@@ -11,7 +11,7 @@ The application supports a local demo mode and a Supabase-backed live mode. Live
 
 ## Configure Supabase
 
-1. In the Supabase SQL Editor for your project, run [`supabase/migrations/20261113_initial_library_schema.sql`](./supabase/migrations/20261113_initial_library_schema.sql).
+1. In the Supabase SQL Editor for your project, run [`supabase/migrations/20261113_initial_library_schema.sql`](./supabase/migrations/20261113_initial_library_schema.sql), then [`supabase/migrations/20261114_portal_payments_and_fines.sql`](./supabase/migrations/20261114_portal_payments_and_fines.sql). The second migration adds the `add_member_fine` function required for staff to post account fines.
 2. Add the project URL and **publishable/anon key** to `.env.local`:
 
    ```dotenv
@@ -59,7 +59,7 @@ The educational schema explorer is available to staff through a restricted RPC. 
 
 The member portal sends fine payments through Safaricom Daraja sandbox STK Push. The fine remains unpaid until the Supabase callback records a successful Daraja result; a request being sent to a phone is not treated as payment.
 
-1. Apply [`supabase/migrations/20261114_portal_payments_and_fines.sql`](./supabase/migrations/20261114_portal_payments_and_fines.sql) in the Supabase SQL Editor after the initial schema migration.
+1. If not already applied, run [`supabase/migrations/20261114_portal_payments_and_fines.sql`](./supabase/migrations/20261114_portal_payments_and_fines.sql) in the Supabase SQL Editor after the initial schema migration.
 2. Obtain Daraja **sandbox** consumer key, consumer secret, shortcode, and passkey from the Safaricom developer portal. In the Supabase Dashboard, open **Edge Functions → Secrets** and set these values (never add them to `VITE_` variables or source code):
 
    ```text

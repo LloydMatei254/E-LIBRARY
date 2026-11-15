@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, X, AlertCircle, CheckCircle2, BookOpen, Upload, Download } from 'lucide-react';
+import { Search, Edit2, Trash2, X, AlertCircle, CheckCircle2, BookOpen, Upload, Download } from 'lucide-react';
 import { Book, Category } from '../types';
 import { api } from '../services/api';
 import { isDemoMode } from '../services/supabaseClient';
@@ -330,8 +330,7 @@ export const ManageBooks: React.FC = () => {
             onClick={openAddModal}
             className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-xs"
           >
-            <Plus className="w-4 h-4" />
-            <span>+ Add New Book</span>
+            <span>Add New Book</span>
           </button>
         </div>
       </div>
@@ -411,7 +410,7 @@ export const ManageBooks: React.FC = () => {
               ) : books.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-8 text-slate-400">
-                    No books found. Click "+ Add New Book" to create one.
+                    No books found. Click "Add New Book" to create one.
                   </td>
                 </tr>
               ) : (
