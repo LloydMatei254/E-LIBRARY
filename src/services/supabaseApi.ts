@@ -419,7 +419,11 @@ export const supabaseApi = {
         const month = borrowing.issue_date.slice(0, 7);
         monthlyCounts.set(month, (monthlyCounts.get(month) ?? 0) + 1);
       }
-      const currentMonth = new Date();
+      const latestIssueDate = borrowingResult.data?.[0]?.issue_date;
+      const [latestYear, latestMonth] = latestIssueDate
+        ? latestIssueDate.split('-').map(Number)
+        : [new Date().getFullYear(), new Date().getMonth() + 1];
+      const currentMonth = new Date(latestYear, latestMonth - 1, 1);
       const borrowingTrends = Array.from({ length: 6 }, (_, index) => {
         const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 5 + index, 1);
         const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;

@@ -63,6 +63,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
 
   const trendData = metrics.borrowing_trends;
   const maxTrend = Math.max(...trendData.map((trend) => trend.count), 1);
+  const hasBorrowingActivity = trendData.some((trend) => trend.count > 0);
   const trendColors = ['bg-[#d1ced8]', 'bg-[#a7a1b5]', 'bg-[#817995]', 'bg-[#51436d]', 'bg-[#26134c]'];
   const categoryTotal = metrics.category_distribution.reduce((total, category) => total + category.count, 0);
   const topCategory = metrics.category_distribution.reduce(
@@ -176,7 +177,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
           </div>
 
           <div className="mt-4 flex h-36 items-end justify-between gap-1.5 rounded-sm bg-slate-50 p-2 sm:gap-2">
-            {trendData.map((trend, idx) => {
+            {hasBorrowingActivity ? trendData.map((trend, idx) => {
               const heightPct = trend.count === 0 ? 0 : Math.max(12, Math.round((trend.count / maxTrend) * 100));
               return (
                 <div
@@ -185,9 +186,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
                   aria-label={`${trend.period}: ${trend.count} borrowings`}
                   className="flex h-full min-w-0 flex-1 flex-col items-center justify-end"
                 >
-                  <div
-                    className="mb-1 text-[10px] font-medium tabular-nums text-slate-500"
-                  >
+                  <div className="mb-1 text-[10px] font-medium tabular-nums text-slate-500">
                     {trend.count}
                   </div>
                   <div
@@ -197,7 +196,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
                   <span className="mt-1 whitespace-nowrap text-[9px] text-slate-500">{trend.period}</span>
                 </div>
               );
-            })}
+            }) : (
+              <p className="m-auto text-center text-xs text-slate-500">
+                No borrowing activity has been recorded yet.
+              </p>
+            )}
           </div>
         </div>
 
