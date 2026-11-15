@@ -2,6 +2,7 @@ import {
   Book,
   Member,
   Admin,
+  AdminRegistrationResult,
   Category,
   Author,
   Borrowing,
@@ -205,6 +206,17 @@ const mockApi = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Registration failed');
     return data.member;
+  },
+
+  async registerAdmin(payload: { full_name: string; email: string; phone: string; password: string }): Promise<AdminRegistrationResult> {
+    const res = await apiFetch('/api/admins/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Admin registration failed');
+    return { admin: data.admin, status: 'active' };
   },
 
   async createStaffAccount(_payload: { full_name: string; email: string; phone: string; password: string }): Promise<{ full_name: string; email: string; role: 'librarian' }> {

@@ -364,6 +364,37 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     });
   }
 
+  if (method === 'POST' && (route === '/api/admins/register' || route === '/api/admins')) {
+    const email = String(body.email || '').trim().toLowerCase();
+    const fullName = String(body.full_name || '').trim();
+    const password = typeof body.password === 'string' ? body.password : '';
+    if (!fullName) {
+      return respond({ error: 'Full name is required.' }, 400);
+    }
+    if (!email || !email.includes('@')) {
+      return respond({ error: 'Enter a valid email address.' }, 400);
+    }
+    if (password.length < 8) {
+      return respond({ error: 'Password must be at least 8 characters.' }, 400);
+    }
+    if (
+      admins.some((item) => item.email.toLowerCase() === email) ||
+      members.some((item) => item.email.toLowerCase() === email)
+    ) {
+      return respond({ error: 'An account with this email already exists.' }, 409);
+    }
+    const admin: Admin = {
+      admin_id: Math.max(0, ...admins.map((item) => item.admin_id)) + 1,
+      full_name: fullName,
+      email,
+      role: 'librarian',
+      created_at: today(),
+    };
+    admins.push(admin);
+    mockPasswords.set(email, password);
+    return respond({ success: true, admin }, 201);
+  }
+
   if (method === 'POST' && route === '/api/login/admin') {
     const email = String(body.email || '').trim().toLowerCase();
     const admin = admins.find((item) => item.email.toLowerCase() === email);

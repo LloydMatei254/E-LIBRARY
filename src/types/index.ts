@@ -37,6 +37,11 @@ export interface Admin {
   created_at: string;
 }
 
+export interface AdminRegistrationResult {
+  admin: Admin | null;
+  status: 'active' | 'email_confirmation' | 'pending_staff_approval';
+}
+
 export interface Category {
   category_id: number;
   category_name: string;

@@ -67,6 +67,29 @@ class LibraryService:
             new_member = Member(member_id, member.full_name, member.email, member.phone, 'active')
             return new_member.to_dict()
 
+    def register_admin(self, full_name: str, email: str, password: str, role: str = 'librarian') -> Dict[str, Any]:
+        admin = Admin(None, full_name, email, role)
+        if not admin.validate():
+            raise ValueError("Validation failed for admin fields.")
+        if len(password or '') < 8:
+            raise ValueError("Password must be at least 8 characters.")
+
+        hashed = self.db.hash_password(password)
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT admin_id FROM admins WHERE LOWER(email) = LOWER(?);", (admin.email,))
+            if cursor.fetchone():
+                raise ValueError("An admin account with this email already exists.")
+            cursor.execute("""
+                INSERT INTO admins (full_name, email, password_hash, role)
+                VALUES (?, ?, ?, ?);
+            """, (admin.full_name, admin.email, hashed, admin.role))
+            admin_id = cursor.lastrowid
+            conn.commit()
+
+            new_admin = Admin(admin_id, admin.full_name, admin.email, admin.role)
+            return new_admin.to_dict()
+
     def get_members(self, search: Optional[str] = None, status: Optional[str] = None) -> List[Dict[str, Any]]:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()

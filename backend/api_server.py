@@ -176,6 +176,15 @@ class LibraryAPIRequestHandler(BaseHTTPRequestHandler):
                 )
                 self._send_json({"success": True, "member": res}, 201)
 
+            elif path == '/api/admins/register' or path == '/api/admins':
+                res = service.register_admin(
+                    full_name=body.get('full_name', ''),
+                    email=body.get('email', ''),
+                    password=body.get('password', ''),
+                    role=body.get('role', 'librarian')
+                )
+                self._send_json({"success": True, "admin": res}, 201)
+
             elif path == '/api/books':
                 admin_id = int(body.get('admin_id', 1))
                 book = service.add_book(body, admin_id=admin_id)

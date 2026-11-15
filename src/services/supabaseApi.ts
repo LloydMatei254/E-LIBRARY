@@ -1,5 +1,6 @@
 import type {
   Admin,
+  AdminRegistrationResult,
   Author,
   Book,
   Borrowing,
@@ -784,6 +785,32 @@ export const supabaseApi = {
     throwIfError(error);
     if (!data) throw new Error('The member profile could not be created.');
     return mapMember(data);
+  },
+
+  async registerAdmin(payload: { full_name: string; email: string; phone: string; password: string }): Promise<AdminRegistrationResult> {
+    requireNetworkForMutation();
+    const client = getSupabaseClient();
+    const { data, error } = await client.auth.signUp({
+      email: payload.email.trim(),
+      password: payload.password,
+      options: {
+        data: {
+          full_name: payload.full_name.trim(),
+          phone: payload.phone.trim(),
+          requested_role: 'librarian',
+        },
+      },
+    });
+    throwIfError(error);
+    if (!data.user || !data.session) {
+      return { admin: null, status: 'email_confirmation' };
+    }
+    const profile = await profileForSession(data.user.id);
+    if (profile.role === 'member' || profile.status !== 'active') {
+      await client.auth.signOut({ scope: 'local' });
+      return { admin: null, status: 'pending_staff_approval' };
+    }
+    return { admin: mapAdmin(profile), status: 'active' };
   },
 
   async createStaffAccount(payload: { full_name: string; email: string; phone: string; password: string }): Promise<{ full_name: string; email: string; role: 'librarian' }> {
