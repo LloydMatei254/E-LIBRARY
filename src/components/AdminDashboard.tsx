@@ -83,7 +83,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
             Dashboard
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Berzowanley Central Management · Logged in as {adminUser.full_name} ({adminUser.role})
+            Page &amp; Pine Central Management · Logged in as {adminUser.full_name} ({adminUser.role})
           </p>
         </div>
 

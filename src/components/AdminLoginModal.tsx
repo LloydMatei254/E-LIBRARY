@@ -186,7 +186,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
 
         <div className="mb-6 text-center">
           <span className="text-xs font-semibold tracking-wider uppercase text-indigo-600">
-            Berzowanley Staff Portal
+            Page &amp; Pine Staff Portal
           </span>
           <h2 className="text-xl font-bold text-slate-900 mt-1">
             {resetMode ? 'Choose a new password' : 'Staff Access & Admin Registration'}

@@ -1,5 +1,5 @@
 """
-Berzowanley Online Library System - Database Manager & Schema
+Page & Pine Online Library System - Database Manager & Schema
 Implements SQLite DBMS for the 10-table schema specified in Deliverable 2.
 """
 

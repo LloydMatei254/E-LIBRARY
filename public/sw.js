@@ -1,4 +1,4 @@
-const CACHE_NAME = 'berzowanley-library-shell-v2';
+const CACHE_NAME = 'page-and-pine-library-shell-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -10,8 +10,10 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(
-      keys.filter((key) => key.startsWith('berzowanley-library-shell-') && key !== CACHE_NAME)
-        .map((key) => caches.delete(key)),
+      keys.filter((key) => (
+        (key.startsWith('berzowanley-library-shell-') || key.startsWith('page-and-pine-library-shell-'))
+        && key !== CACHE_NAME
+      )).map((key) => caches.delete(key)),
     )),
   );
   self.clients.claim();

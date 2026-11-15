@@ -103,7 +103,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Express] Berzowanley E-Library server running at http://0.0.0.0:${PORT}`);
+    console.log(`[Express] Page & Pine E-Library server running at http://0.0.0.0:${PORT}`);
   });
 }
 

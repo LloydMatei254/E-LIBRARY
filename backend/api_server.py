@@ -1,5 +1,5 @@
 """
-Berzowanley Online Library System - Python HTTP REST API Server
+Page & Pine Online Library System - Python HTTP REST API Server
 Bridges the Python OOP backend with the Web Frontend & Admin Panel.
 Uses Python 3 standard library http.server (fast, zero external pip dependencies).
 """

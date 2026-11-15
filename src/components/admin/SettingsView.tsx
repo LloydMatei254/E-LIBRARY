@@ -5,7 +5,7 @@ export const SettingsView: React.FC = () => {
   const [loanPeriod, setLoanPeriod] = useState(14);
   const [fineRate, setFineRate] = useState(50);
   const [maxLoans, setMaxLoans] = useState(5);
-  const [libraryName, setLibraryName] = useState('Berzowanley University E-Library');
+  const [libraryName, setLibraryName] = useState('Page & Pine University E-Library');
   const [saved, setSaved] = useState(false);
 
   const handleSave = (e: React.FormEvent) => {

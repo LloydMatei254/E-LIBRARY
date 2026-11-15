@@ -89,7 +89,7 @@ export const PublicFooter: React.FC<PublicFooterProps> = ({
         </div>
 
         <div className="text-[11px] text-stone-500">
-          <span>© 2026 Berzowanley Online Library. All Rights Reserved.</span>
+          <span>© 2026 Page &amp; Pine Online Library. All Rights Reserved.</span>
         </div>
       </div>
     </footer>

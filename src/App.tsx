@@ -465,7 +465,7 @@ export default function App() {
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-blue-500" />
-                  <span className="font-semibold text-slate-800">Berzowanley Online Library System</span>
+                  <span className="font-semibold text-slate-800">Page &amp; Pine Online Library System</span>
                   <span aria-hidden="true">·</span>
                   <span>Professional Library Management Platform</span>
                 </div>

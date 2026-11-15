@@ -567,7 +567,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
         <div className="flex h-[76px] items-center gap-3 border-b border-white/10 px-6">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500 text-white"><LibraryBig className="h-5 w-5" /></span>
           <div>
-            <p className="text-sm font-bold tracking-wide">BERZOWANLEY</p>
+            <p className="text-sm font-bold tracking-wide">PAGE &amp; PINE</p>
             <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-400">Library portal</p>
           </div>
         </div>
@@ -579,7 +579,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
           <button type="button" onClick={onLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white">
             <LogOut className="h-[18px] w-[18px]" /> Sign out
           </button>
-          <p className="mt-4 px-3 text-[10px] text-slate-500">Berzowanley Online Library</p>
+          <p className="mt-4 px-3 text-[10px] text-slate-500">Page &amp; Pine Online Library</p>
         </div>
       </aside>
 
@@ -647,7 +647,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
           </div>
         </main>
         <footer className="border-t border-slate-200 bg-white px-4 py-4 text-center text-xs text-slate-500 sm:px-7">
-          <span>Berzowanley Online Library System</span>
+          <span>Page &amp; Pine Online Library System</span>
           <span className="mx-2 text-slate-300">·</span>
           <button type="button" onClick={() => selectSection('settings')} className="hover:text-emerald-700">Account settings</button>
           <span className="mx-2 text-slate-300">·</span>

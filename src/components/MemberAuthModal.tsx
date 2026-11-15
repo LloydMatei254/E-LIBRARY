@@ -164,7 +164,7 @@ export const MemberAuthModal: React.FC<MemberAuthModalProps> = ({
         </button>
 
         <div className="mb-6 text-center">
-          <span className="text-xs font-semibold tracking-wider uppercase text-indigo-600">Berzowanley Portal</span>
+          <span className="text-xs font-semibold tracking-wider uppercase text-indigo-600">Page &amp; Pine Portal</span>
           <h2 className="text-xl font-bold text-slate-900 mt-1">{resetMode ? 'Choose a new password' : 'Member Access & Registration'}</h2>
           <p className="text-xs text-slate-500 mt-1">Corresponds strictly to Deliverable 2 Section 1 Front-End Wireframe</p>
         </div>

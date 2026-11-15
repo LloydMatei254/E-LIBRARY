@@ -1,5 +1,5 @@
 """
-Berzowanley Online Library System - OOP Test Suite & Verification
+Page & Pine Online Library System - OOP Test Suite & Verification
 Formally verifies the 4 OOP Pillars (Encapsulation, Inheritance, Polymorphism, Abstraction)
 and Relational Database Transactions.
 """

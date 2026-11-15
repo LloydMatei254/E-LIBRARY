@@ -1,5 +1,5 @@
 """
-Berzowanley Online Library System - Service Layer & Business Logic
+Page & Pine Online Library System - Service Layer & Business Logic
 Coordinates OOP domain entities, SQLite database transactions, and business rules.
 """
 

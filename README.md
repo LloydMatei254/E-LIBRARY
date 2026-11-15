@@ -1,4 +1,4 @@
-# Berzowanley Online Library System
+# Page & Pine Online Library System
 
 The application supports a local demo mode and a Supabase-backed live mode. Live mode uses Supabase Auth and PostgreSQL; successful reads are cached in the browser so catalogue and account data can be viewed offline. Borrowing, returns, reservations, fine-payment recording, and staff changes require a connection.
 

@@ -98,7 +98,7 @@ export const PresentationMode: React.FC = () => {
   const copyAllCodeForWord = () => {
     let fullDoc = `========================================================================\n`;
     fullDoc += `CMT210: OBJECT-ORIENTED PROGRAMMING IN PYTHON - ASSIGNMENT 1\n`;
-    fullDoc += `PROJECT: BERZOWANLEY ONLINE LIBRARY MANAGEMENT SYSTEM\n`;
+    fullDoc += `PROJECT: PAGE & PINE ONLINE LIBRARY MANAGEMENT SYSTEM\n`;
     fullDoc += `DBMS: SQLITE3 RELATIONAL DATABASE (10 SCHEMAS)\n`;
     fullDoc += `========================================================================\n\n`;
 

@@ -1,4 +1,4 @@
-const databaseName = 'berzowanley-library-offline';
+const databaseName = 'page-and-pine-library-offline';
 const storeName = 'api-cache';
 const databaseVersion = 1;
 let databasePromise: Promise<IDBDatabase> | null = null;

@@ -1,5 +1,5 @@
 """
-Berzowanley Online Library Management System
+Page & Pine Online Library Management System
 Interactive Terminal CLI Presentation Interface for CMT210 Project Defense
 """
 
@@ -20,7 +20,7 @@ def main_menu():
     service = LibraryService()
     
     while True:
-        print_header("BERZOWANLEY E-LIBRARY - PYTHON OOP SYSTEM (CMT210)")
+        print_header("PAGE & PINE E-LIBRARY - PYTHON OOP SYSTEM (CMT210)")
         print("1. View Dashboard & Statistical Analytics")
         print("2. Browse Book Catalog (Search & Availability)")
         print("3. Add New Book (Admin Catalog Management)")
@@ -127,7 +127,7 @@ def main_menu():
                 print(f"   Columns: {', '.join(col_names[:6])}...")
 
         elif choice == '0':
-            print("\nExiting Berzowanley E-Library System. Goodbye!")
+            print("\nExiting Page & Pine E-Library System. Goodbye!")
             break
         else:
             print("\nInvalid choice. Please select from the menu.")

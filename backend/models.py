@@ -1,5 +1,5 @@
 """
-Berzowanley Online Library System - OOP Models & Domain Architecture
+Page & Pine Online Library System - OOP Models & Domain Architecture
 Demonstrates Python Object-Oriented Programming principles:
 - Abstraction (ABC, abstract methods)
 - Encapsulation (Private attributes, property getters/setters with validation)
