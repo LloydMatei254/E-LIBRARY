@@ -9,9 +9,9 @@ const jsonResponse = (status: number, body: Record<string, unknown>) =>
 Deno.serve(async (request: Request) => {
   if (request.method !== 'POST') return jsonResponse(405, { error: 'Method not allowed.' });
 
-  const expectedToken = Deno.env.get('MPESA_CALLBACK_TOKEN');
+  const expectedToken = Deno.env.get('MPESA_CALLBACK_TOKEN')?.trim();
   const callbackUrl = new URL(request.url);
-  const actualToken = callbackUrl.searchParams.get('token');
+  const actualToken = callbackUrl.searchParams.get('token')?.trim();
   if (!expectedToken || !actualToken || actualToken !== expectedToken) {
     return jsonResponse(401, { error: 'Unauthorized callback.' });
   }
@@ -20,8 +20,8 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(400, { error: 'Callback is missing a valid payment reference.' });
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')?.trim().replace(/\/+$/, '');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim();
   if (!supabaseUrl || !serviceRoleKey) {
     console.error('M-Pesa callback is missing Supabase server configuration.');
     return jsonResponse(503, { error: 'Callback is not configured.' });

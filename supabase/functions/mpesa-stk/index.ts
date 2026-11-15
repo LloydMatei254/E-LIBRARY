@@ -23,14 +23,14 @@ Deno.serve(async (request: Request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return jsonResponse(405, { error: 'Method not allowed.' });
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const consumerKey = Deno.env.get('MPESA_CONSUMER_KEY');
-  const consumerSecret = Deno.env.get('MPESA_CONSUMER_SECRET');
-  const shortcode = Deno.env.get('MPESA_SHORTCODE');
-  const passkey = Deno.env.get('MPESA_PASSKEY');
-  const callbackToken = Deno.env.get('MPESA_CALLBACK_TOKEN');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')?.trim().replace(/\/+$/, '');
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')?.trim();
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim();
+  const consumerKey = Deno.env.get('MPESA_CONSUMER_KEY')?.trim();
+  const consumerSecret = Deno.env.get('MPESA_CONSUMER_SECRET')?.trim();
+  const shortcode = Deno.env.get('MPESA_SHORTCODE')?.trim();
+  const passkey = Deno.env.get('MPESA_PASSKEY')?.trim();
+  const callbackToken = Deno.env.get('MPESA_CALLBACK_TOKEN')?.trim();
   if (!supabaseUrl || !anonKey || !serviceRoleKey || !consumerKey || !consumerSecret || !shortcode || !passkey || !callbackToken) {
     console.error('M-Pesa STK Push is missing one or more required server secrets.');
     return jsonResponse(503, { error: 'M-Pesa payments are not configured yet.' });
@@ -120,9 +120,11 @@ Deno.serve(async (request: Request) => {
       headers: { Authorization: `Basic ${btoa(`${consumerKey}:${consumerSecret}`)}` },
     });
     if (!tokenResponse.ok) {
-      await markFailed('Could not authenticate with the M-Pesa sandbox.');
-      console.error('M-Pesa OAuth request failed.', tokenResponse.status);
-      return jsonResponse(502, { error: 'M-Pesa could not be reached. Please try again later.' });
+      const oauthText = await tokenResponse.text().catch(() => '');
+      const reason = `M-Pesa OAuth failed (${tokenResponse.status})${oauthText ? `: ${oauthText}` : '. Check MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET.'}`;
+      await markFailed(reason);
+      console.error('M-Pesa OAuth request failed.', tokenResponse.status, oauthText);
+      return jsonResponse(502, { error: 'M-Pesa authentication failed. Verify MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET.' });
     }
     const tokenData = await tokenResponse.json();
     if (typeof tokenData.access_token !== 'string') {
@@ -152,14 +154,16 @@ Deno.serve(async (request: Request) => {
         TransactionDesc: 'Library fine',
       }),
     });
-    const stkData = await stkResponse.json();
+    const stkData = await stkResponse.json().catch(() => ({} as Record<string, unknown>));
     if (!stkResponse.ok || String(stkData.ResponseCode) !== '0' || !stkData.CheckoutRequestID) {
-      const description = typeof stkData.ResponseDescription === 'string'
+      const rawDescription = typeof stkData.ResponseDescription === 'string'
         ? stkData.ResponseDescription
         : typeof stkData.errorMessage === 'string'
           ? stkData.errorMessage
           : 'M-Pesa rejected the payment request.';
-      console.error('M-Pesa STK Push rejected.', stkResponse.status, description);
+      const errorCode = typeof stkData.errorCode === 'string' ? ` (${stkData.errorCode})` : '';
+      const description = `${rawDescription}${errorCode}`;
+      console.error('M-Pesa STK Push rejected.', stkResponse.status, description, stkData);
       await markFailed(description);
       return jsonResponse(502, { error: description });
     }
