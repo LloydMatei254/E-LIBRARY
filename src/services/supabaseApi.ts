@@ -50,6 +50,27 @@ function throwIfLoginError(error: { message: string } | null) {
   throw new Error(formatSupabaseErrorMessage(error.message));
 }
 
+async function extractEdgeFunctionError(error: unknown, functionName: string, fallback: string): Promise<string> {
+  if (error && typeof error === 'object') {
+    const context = (error as { context?: unknown }).context;
+    if (context && typeof (context as Response).clone === 'function') {
+      try {
+        const body = await (context as Response).clone().json() as { error?: string; message?: string };
+        if (typeof body?.error === 'string' && body.error.trim()) return body.error;
+        if (typeof body?.message === 'string' && body.message.trim()) return body.message;
+      } catch {
+        // Ignore non-JSON error bodies
+      }
+    }
+    const message = (error as { message?: string }).message;
+    if (message && /failed to send a request to the edge function/i.test(message)) {
+      return `The ${functionName} Edge Function is not deployed on your Supabase project yet. Deploy ${functionName} (and mpesa-callback) in Supabase Edge Functions and configure your Daraja secrets.`;
+    }
+    if (message) return formatSupabaseErrorMessage(message);
+  }
+  return fallback;
+}
+
 async function userCacheKey(resource: string, scope: string): Promise<string> {
   const { data, error } = await getSupabaseClient().auth.getSession();
   throwIfError(error);
@@ -828,7 +849,9 @@ export const supabaseApi = {
     const { data, error } = await getSupabaseClient().functions.invoke<{
       staff: { full_name: string; email: string; role: 'librarian' };
     }>('create-staff-account', { body: payload });
-    throwIfError(error);
+    if (error) {
+      throw new Error(await extractEdgeFunctionError(error, 'create-staff-account', 'The staff account could not be created.'));
+    }
     if (!data?.staff) throw new Error('The staff account could not be created.');
     return data.staff;
   },
@@ -920,7 +943,9 @@ export const supabaseApi = {
     const { data, error } = await getSupabaseClient().functions.invoke<{ message?: string; error?: string }>('mpesa-stk', {
       body: { fine_id: fineId, phone },
     });
-    if (error) throw new Error(error.message || 'Could not start the M-Pesa payment.');
+    if (error) {
+      throw new Error(await extractEdgeFunctionError(error, 'mpesa-stk', 'Could not start the M-Pesa payment.'));
+    }
     if (!data || data.error || !data.message) {
       throw new Error(data?.error || 'M-Pesa did not return a payment confirmation.');
     }

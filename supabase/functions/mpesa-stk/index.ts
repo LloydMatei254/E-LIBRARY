@@ -113,7 +113,8 @@ Deno.serve(async (request: Request) => {
   };
 
   try {
-    const timestamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
+    const eatNow = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    const timestamp = eatNow.toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
     const password = btoa(`${shortcode}${passkey}${timestamp}`);
     const tokenResponse = await fetch('https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials', {
       headers: { Authorization: `Basic ${btoa(`${consumerKey}:${consumerSecret}`)}` },
@@ -158,8 +159,9 @@ Deno.serve(async (request: Request) => {
         : typeof stkData.errorMessage === 'string'
           ? stkData.errorMessage
           : 'M-Pesa rejected the payment request.';
+      console.error('M-Pesa STK Push rejected.', stkResponse.status, description);
       await markFailed(description);
-      return jsonResponse(502, { error: 'M-Pesa could not start the prompt. Check the number and try again.' });
+      return jsonResponse(502, { error: description });
     }
 
     const { data: updatedPayment, error: updateError } = await serviceClient

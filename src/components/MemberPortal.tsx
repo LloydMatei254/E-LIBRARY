@@ -94,6 +94,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [payingFine, setPayingFine] = useState<Fine | null>(null);
   const [mpesaPhone, setMpesaPhone] = useState(member.phone);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [requestingPayment, setRequestingPayment] = useState(false);
   const onLogoutRef = useRef(onLogout);
 
@@ -161,16 +162,16 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
     if (!payingFine) return;
     setRequestingPayment(true);
     setFeedback(null);
+    setPaymentError(null);
     try {
       const result = await api.requestFinePayment(payingFine.fine_id, mpesaPhone);
       setFeedback({ message: result.message });
       setPayingFine(null);
       void loadData(false);
     } catch (error) {
-      setFeedback({
-        message: error instanceof Error ? error.message : 'Could not start the M-Pesa payment.',
-        error: true,
-      });
+      const message = error instanceof Error ? error.message : 'Could not start the M-Pesa payment.';
+      setPaymentError(message);
+      setFeedback({ message, error: true });
     } finally {
       setRequestingPayment(false);
     }
@@ -294,6 +295,7 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
                 type="button"
                 onClick={() => {
                   setMpesaPhone(profile.phone);
+                  setPaymentError(null);
                   setPayingFine(fine);
                 }}
                 className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800"
@@ -665,6 +667,12 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
               KES {payingFine.amount.toFixed(2)} for {payingFine.book_title}. Enter the phone number that should receive the STK prompt.
             </p>
             <form onSubmit={handleRequestFinePayment} className="mt-5 space-y-4">
+              {paymentError && (
+                <div role="alert" className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{paymentError}</span>
+                </div>
+              )}
               <label className="block text-sm font-medium text-slate-700" htmlFor="mpesa-phone">
                 M-Pesa phone number
                 <input
@@ -683,7 +691,10 @@ export const MemberPortal: React.FC<MemberPortalProps> = ({ member, onNavigateTo
                 <button
                   type="button"
                   disabled={requestingPayment}
-                  onClick={() => setPayingFine(null)}
+                  onClick={() => {
+                    setPaymentError(null);
+                    setPayingFine(null);
+                  }}
                   className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-60"
                 >
                   Cancel
