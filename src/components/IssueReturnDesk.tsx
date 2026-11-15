@@ -116,13 +116,12 @@ export const IssueReturnDesk: React.FC = () => {
         </div>
       )}
 
-      {/* Header */}
       <div>
         <h1 className="text-xl font-bold tracking-tight text-slate-900">
           Issue / Return Books
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Deliverable 2 Section 3.6 · Real-Time Circulation Management & Fine Assessment
+          Manage active loans, returns, and fine assessment.
         </p>
       </div>
 
@@ -138,7 +137,6 @@ export const IssueReturnDesk: React.FC = () => {
         </div>
       )}
 
-      {/* Two-Column Cards strictly matching Deliverable 2 Section 3.6 Wireframe */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Box: Issue a Book */}
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">

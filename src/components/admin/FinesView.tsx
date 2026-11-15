@@ -71,7 +71,7 @@ export const FinesView: React.FC = () => {
             Fines & Penalties Ledger
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Deliverable 2 Database Schema Table 9 (<code className="font-mono">fines</code>) · Overdue Rate: KES 50.00/day
+            Overdue Rate: KES 50.00/day
           </p>
         </div>
 

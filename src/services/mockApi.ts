@@ -51,6 +51,12 @@ const members: Member[] = [
     role: 'member',
   },
 ];
+const mockPasswords = new Map<string, string>([
+  ['beatrice.w@student.ac.ke', 'member123'],
+  ['zora.kiprop@student.ac.ke', 'member123'],
+  ['wangui.k@student.ac.ke', 'member123'],
+  ['admin@library.ac.ke', 'admin123'],
+]);
 const admins: Admin[] = [
   {
     admin_id: 1,
@@ -245,17 +251,22 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
       && (!search || `${member.full_name} ${member.email} ${member.member_code}`.toLowerCase().includes(search))));
   }
   if (method === 'POST' && (route === '/api/members/register' || route === '/api/members')) {
+    const email = String(body.email || '').trim().toLowerCase();
+    if (members.some((item) => item.email.toLowerCase() === email)) {
+      return respond({ error: 'An account with this email already exists.' }, 409);
+    }
     const member: Member = {
       member_id: Math.max(0, ...members.map((item) => item.member_id)) + 1,
       member_code: `M${String(members.length + 1).padStart(4, '0')}`,
       full_name: body.full_name || 'Demo Member',
-      email: body.email || '',
+      email,
       phone: body.phone || '',
       status: 'active',
       registered_at: today(),
       role: 'member',
     };
     members.push(member);
+    if (typeof body.password === 'string') mockPasswords.set(email, body.password);
     return respond({ success: true, member }, 201);
   }
   if (pathParts[1] === 'members' && pathParts[2] && pathParts[3] === 'status' && method === 'PATCH') {
@@ -353,9 +364,21 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     });
   }
 
-  if (method === 'POST' && route === '/api/login/admin') return respond({ admin: admins[0] });
+  if (method === 'POST' && route === '/api/login/admin') {
+    const email = String(body.email || '').trim().toLowerCase();
+    const admin = admins.find((item) => item.email.toLowerCase() === email);
+    if (!admin || mockPasswords.get(email) !== body.password) {
+      return respond({ error: 'Wrong email or password.' }, 401);
+    }
+    return respond({ admin });
+  }
   if (method === 'POST' && route === '/api/login/member') {
-    const member = members.find((item) => item.email === body.email) || members[0];
+    const email = String(body.email || '').trim().toLowerCase();
+    const member = members.find((item) => item.email.toLowerCase() === email);
+    if (!member || mockPasswords.get(email) !== body.password) {
+      return respond({ error: 'Wrong email or password.' }, 401);
+    }
+    if (member.status !== 'active') return respond({ error: 'This library account is not active.' }, 403);
     return respond({ member });
   }
   if (method === 'GET' && route === '/api/dashboard') {

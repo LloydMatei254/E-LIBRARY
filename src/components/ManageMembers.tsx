@@ -150,14 +150,13 @@ export const ManageMembers: React.FC = () => {
         </div>
       )}
 
-      {/* Header matching Section 3.5 */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
             Manage Members
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Deliverable 2 Section 3.5 · Patron Enrollment & Status Control
+            Review member accounts, edit details, and manage fines.
           </p>
         </div>
 

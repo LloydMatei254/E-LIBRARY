@@ -44,7 +44,6 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
           <X className="w-5 h-5" />
         </button>
 
-        {/* Deliverable 2 Section 2 Header Exact Branding */}
         <div className="text-center mb-6">
           <h1 className="text-xl font-bold tracking-tight text-slate-900 font-sans">
             berzowanley

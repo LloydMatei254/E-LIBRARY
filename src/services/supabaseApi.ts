@@ -31,6 +31,14 @@ function throwIfError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
 
+function throwIfLoginError(error: { message: string } | null) {
+  if (!error) return;
+  if (/invalid login credentials/i.test(error.message)) {
+    throw new Error('Wrong email or password.');
+  }
+  throw new Error(error.message);
+}
+
 async function userCacheKey(resource: string, scope: string): Promise<string> {
   const { data, error } = await getSupabaseClient().auth.getSession();
   throwIfError(error);
@@ -726,7 +734,7 @@ export const supabaseApi = {
     requireNetworkForMutation();
     const client = getSupabaseClient();
     const { data, error } = await client.auth.signInWithPassword({ email, password });
-    throwIfError(error);
+    throwIfLoginError(error);
     if (!data.user) throw new Error('Staff sign-in did not return a user.');
     const profile = await profileForSession(data.user.id);
     if (profile.role === 'member' || profile.status !== 'active') {
@@ -740,7 +748,7 @@ export const supabaseApi = {
     requireNetworkForMutation();
     const client = getSupabaseClient();
     const { data, error } = await client.auth.signInWithPassword({ email, password });
-    throwIfError(error);
+    throwIfLoginError(error);
     if (!data.user) throw new Error('Member sign-in did not return a user.');
     const profile = await profileForSession(data.user.id);
     if (profile.role !== 'member' || profile.status !== 'active') {

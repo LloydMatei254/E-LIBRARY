@@ -72,9 +72,6 @@ export const AuthorsView: React.FC = () => {
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
             Authors Management
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Deliverable 2 Database Schema Table 4 (<code className="font-mono">authors</code>)
-          </p>
         </div>
 
         <button

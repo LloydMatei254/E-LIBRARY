@@ -22,8 +22,8 @@ export const MemberAuthModal: React.FC<MemberAuthModalProps> = ({
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
 
   // Login form
-  const [loginEmail, setLoginEmail] = useState(isDemoMode ? 'beatrice.w@student.ac.ke' : '');
-  const [loginPassword, setLoginPassword] = useState(isDemoMode ? 'member123' : '');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   // Register form
   const [regName, setRegName] = useState('');

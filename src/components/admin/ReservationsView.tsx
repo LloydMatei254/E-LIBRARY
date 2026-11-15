@@ -61,9 +61,6 @@ export const ReservationsView: React.FC = () => {
         <h1 className="text-xl font-bold tracking-tight text-slate-900">
           Reservations & Holds Queue
         </h1>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Deliverable 2 Database Schema Table 8 (<code className="font-mono">reservations</code>)
-        </p>
       </div>
 
       {error && (

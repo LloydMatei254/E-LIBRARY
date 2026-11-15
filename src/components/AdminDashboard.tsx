@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, Users, Clock, AlertTriangle, ArrowUpRight, CheckCircle2, TrendingUp, Database } from 'lucide-react';
 import { DashboardMetrics, Admin } from '../types';
 import { api } from '../services/api';
-import { isDemoMode } from '../services/supabaseClient';
 
 const schemaTables = [
   {
@@ -133,12 +132,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-            isDemoMode ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
-          }`}>
-            {isDemoMode ? 'Demo data' : 'Live Supabase data'}
-          </span>
+        <div>
           <button
             onClick={() => onNavigateSubview('circulation')}
             className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors whitespace-nowrap shrink-0 shadow-xs"
@@ -154,7 +148,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
         </div>
       )}
 
-      {/* 4 KPI Cards strictly matching Deliverable 2 Page 2 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Books */}
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
@@ -218,7 +211,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
         </div>
       </div>
 
-      {/* Charts Row matching Deliverable 2 Page 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Borrowing Trends Bar Chart */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
@@ -305,7 +297,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminUser, onNav
         </div>
       </div>
 
-      {/* Recent Transactions Table strictly matching Deliverable 2 Page 2 */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
           <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">

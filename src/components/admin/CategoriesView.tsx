@@ -72,9 +72,6 @@ export const CategoriesView: React.FC = () => {
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
             Categories Management
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Deliverable 2 Database Schema Table 3 (<code className="font-mono">categories</code>)
-          </p>
         </div>
 
         <button

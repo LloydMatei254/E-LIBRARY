@@ -301,14 +301,13 @@ export const ManageBooks: React.FC = () => {
         </div>
       )}
 
-      {/* Top Header & Search Bar matching Section 3.3 wireframe */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
             Manage Books
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Deliverable 2 Section 3.3 · Complete catalogue management
+            Manage catalogue titles, copies, and cover images.
           </p>
         </div>
 
@@ -494,9 +493,6 @@ export const ManageBooks: React.FC = () => {
               <h2 className="text-base font-bold text-slate-900">
                 {editingBook ? 'Edit Book' : 'Add Book'}
               </h2>
-              <span className="text-xs text-slate-500">
-                Deliverable 2 Section 3.4 Add / Edit Book Form
-              </span>
             </div>
 
             <form onSubmit={handleSaveBook} className="space-y-4">

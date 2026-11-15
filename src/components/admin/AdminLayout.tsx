@@ -42,13 +42,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
       {/* Main Admin Viewport */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-hidden">
-        {/* Top Header Bar strictly matching Deliverable 2 Section 3 Header */}
         <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-2xs">
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
-            <span className="text-slate-400">https://www.e-library.com/admin/{currentTab}</span>
-          </div>
-
-          {/* Right Header Zone: Admin Name + Logout button matching Deliverable 2 */}
           <div className="flex items-center gap-4 text-xs">
             <span className="font-semibold text-slate-700">
               Admin: {adminUser.full_name}
