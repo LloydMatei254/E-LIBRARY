@@ -1,12 +1,16 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/supabase';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+const cleanEnv = (value: string | undefined): string | undefined =>
+  value?.trim().replace(/^(['"])(.*)\1$/, '$2').trim();
+
+const supabaseUrl = cleanEnv(import.meta.env.VITE_SUPABASE_URL)?.replace(/\/+$/, '');
+const supabaseAnonKey = cleanEnv(import.meta.env.VITE_SUPABASE_ANON_KEY);
+const demoModeEnv = cleanEnv(import.meta.env.VITE_DEMO_MODE);
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
-export const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
-  || (import.meta.env.VITE_DEMO_MODE !== 'false' && !isSupabaseConfigured);
+export const isDemoMode = demoModeEnv === 'true'
+  || (demoModeEnv !== 'false' && !isSupabaseConfigured);
 
 const createSupabaseClient = (): SupabaseClient<Database> | null => {
   if (!supabaseUrl || !supabaseAnonKey) return null;

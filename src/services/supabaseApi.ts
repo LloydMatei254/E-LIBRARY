@@ -28,8 +28,18 @@ const today = () => new Date().toISOString().slice(0, 10);
 const dayDifference = (date: string, from = today()) =>
   Math.floor((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 
+function formatSupabaseErrorMessage(message: string): string {
+  if (/invalid api key/i.test(message)) {
+    return 'Supabase rejected the configured API key (Invalid API key). Update VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your deployment environment variables (e.g. Vercel) to match your Supabase project API settings and redeploy.';
+  }
+  if (/email rate limit exceeded/i.test(message)) {
+    return 'Supabase email rate limit reached. Wait a short while before registering another account, or confirm the user in your Supabase Auth dashboard.';
+  }
+  return message;
+}
+
 function throwIfError(error: { message: string } | null) {
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatSupabaseErrorMessage(error.message));
 }
 
 function throwIfLoginError(error: { message: string } | null) {
@@ -37,7 +47,7 @@ function throwIfLoginError(error: { message: string } | null) {
   if (/invalid login credentials/i.test(error.message)) {
     throw new Error('Wrong email or password.');
   }
-  throw new Error(error.message);
+  throw new Error(formatSupabaseErrorMessage(error.message));
 }
 
 async function userCacheKey(resource: string, scope: string): Promise<string> {
