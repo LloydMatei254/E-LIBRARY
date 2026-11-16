@@ -1,82 +1,9 @@
-# Page & Pine Online Library System
-
-The application supports a local demo mode and a Supabase-backed live mode. Live mode uses Supabase Auth and PostgreSQL; successful reads are cached in the browser so catalogue and account data can be viewed offline. Borrowing, returns, reservations, fine-payment recording, and staff changes require a connection.
-
-## Local setup
-
-1. Install dependencies with `npm install`.
-2. Copy `.env.example` to `.env.local`.
-3. Keep `VITE_DEMO_MODE=true` to force the built-in mock data. When Supabase URL and key are configured, the app uses live data unless demo mode is explicitly enabled.
-4. Start the app with `npm run dev`. Run `npm run lint` and `npm run build` to validate it.
-
-## Configure Supabase
-
-1. In the Supabase SQL Editor for your project, run [`supabase/migrations/20261113_initial_library_schema.sql`](./supabase/migrations/20261113_initial_library_schema.sql), then [`supabase/migrations/20261114_portal_payments_and_fines.sql`](./supabase/migrations/20261114_portal_payments_and_fines.sql). The second migration adds the `add_member_fine` function required for staff to post account fines.
-2. Add the project URL and **publishable/anon key** to `.env.local`:
-
-   ```dotenv
-   VITE_DEMO_MODE=false
-   VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-   VITE_SUPABASE_ANON_KEY=YOUR_PUBLISHABLE_OR_ANON_KEY
-   ```
-
-   Never put a `service_role` key in a `VITE_` variable or in browser code.
-3. Restart the local server. In Vercel, add the same three `VITE_` variables to the project’s Environment Variables and redeploy. Set `VITE_DEMO_MODE` to exactly `false` for live data.
-4. Configure Supabase Auth’s site URL and redirect URLs for the local app and deployed domain. Keep email confirmation enabled so existing member profiles are only linked after the member proves control of their email.
-5. To bootstrap the first super admin, create/confirm its Auth account, then promote its matching profile from the Supabase SQL Editor:
-
-   ```sql
-   update public.profiles
-   set role = 'super_admin'
-   where lower(email) = lower('staff@example.com');
-   ```
-
-   Keep this SQL bootstrap private; do not expose role changes through the member-facing app. After the first super admin is active, that account can create librarian accounts in **Admin → Staff accounts**. Deploy the `create-staff-account` Edge Function for this feature:
-
-   ```powershell
-   supabase functions deploy create-staff-account
-   ```
-
-   New staff accounts are confirmed and assigned the librarian role. Share the temporary password securely and ask each staff member to change it after signing in.
-
-The migration also creates a public `book-covers` Storage bucket. Staff can select a JPEG, PNG, or WebP cover in the book form; uploaded files are stored under `categories/<category_id>/` and the public URL is saved with the book. Images are limited to 5 MB each and 50 per category, enforced by Storage policies. In demo mode, cover images can be set using a URL instead.
-
-In live mode, staff can use **Import demo covers** in Manage Books to transfer the 15 demo book covers into Storage and link them to matching live books. Matching books and categories must already exist in Supabase; existing custom covers are left unchanged.
-
-## Existing SQLite data
-
-The Supabase schema starts empty; running the migration does not copy data from `backend/library.db`. Export books, categories, authors, members, loans, reservations, and fines from the existing SQLite database and import them in dependency order using the Supabase dashboard or a trusted one-time migration script. Do not import SQLite password hashes as Supabase credentials. Members must register or use Supabase password recovery; signup links an existing profile by email when available.
-
-Review and back up the target Supabase project before importing production records. Staff can create account fines, and members can request M-Pesa payment for an outstanding fine.
-
-## Offline behavior
-
-Production builds register a service worker to cache the app shell and static assets. The browser’s IndexedDB cache stores successful Supabase reads; when Supabase is unreachable, the app can show previously saved live data. It does not substitute demo records in live mode, and writes are never queued or reported as successful offline.
-
-The educational schema explorer is available to staff through a restricted RPC. Direct SQL execution is disabled in live mode. The legacy OOP test and code-bundle endpoints still require `VITE_API_BASE_URL`.
-
-## M-Pesa sandbox fine payments
-
-The member portal sends fine payments through Safaricom Daraja sandbox STK Push. The fine remains unpaid until the Supabase callback records a successful Daraja result; a request being sent to a phone is not treated as payment.
-
-1. If not already applied, run [`supabase/migrations/20261114_portal_payments_and_fines.sql`](./supabase/migrations/20261114_portal_payments_and_fines.sql) in the Supabase SQL Editor after the initial schema migration.
-2. Obtain Daraja **sandbox** consumer key, consumer secret, shortcode, and passkey from the Safaricom developer portal. In the Supabase Dashboard, open **Edge Functions → Secrets** and set these values (never add them to `VITE_` variables or source code):
-
-   ```text
-   MPESA_CONSUMER_KEY
-   MPESA_CONSUMER_SECRET
-   MPESA_SHORTCODE
-   MPESA_PASSKEY
-   MPESA_CALLBACK_TOKEN
-   ```
-
-   `MPESA_CALLBACK_TOKEN` must be a long random value. Supabase supplies `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions.
-3. Link the Supabase CLI to your project, then deploy both functions from the repository root:
-
-   ```powershell
-   supabase link --project-ref YOUR_PROJECT_REF
-   supabase functions deploy mpesa-stk
-   supabase functions deploy mpesa-callback
-   ```
-
-4. Test with Daraja sandbox-supported phone numbers and credentials. Sandbox prompts do not move real funds. Production payments require a separate production Daraja application and configuration.
+<img width="1240" height="1755" alt="page-and-pine-project-presentation-guide1_page-0009" src="https://github.com/user-attachments/assets/934ec032-bd78-451c-bc8e-3ac5b01695c8" />
+<img width="1240" height="1755" alt="page-and-pine-project-presentation-guide1_page-0008" src="https://github.com/user-attachments/assets/3a33f409-6863-487a-b23b-31433d1c1a78" />
+<img width="1240" height="1755" alt="page-and-pine-project-presentation-guide1_page-0007" src="https://github.com/user-attachments/assets/20c927f7-2198-4d15-972f-2ff2f37f64db" />
+<img width="1240" height="1755" alt="page-and-pine-project-presentation-guide1_page-0006" src="https://github.com/user-attachments/assets/81b2a3e1-7b6a-47c2-93ee-fd3ecc8b0e46" />
+<img width="1240" height="1755" alt="page-and-pine-project-presentation-guide1_page-0005" src="https://github.com/user-attachments/assets/ef282090-9d75-4206-b277-f1cdb7c711af" />
+<img width="1240" height="1755" alt="page-and-pine-project-presentation-guide1_page-0004" src="https://github.com/user-attachments/assets/4ec00263-0bcb-4628-a906-ff2cd4f90f08" />
+<img width="1240" height="1755" alt="page-and-pine-project-presentation-guide1_page-0003" src="https://github.com/user-attachments/assets/486f325a-65c1-45e1-bb5b-9f277b4ad2da" />
+<img width="1240" height="1755" alt="page-and-pine-project-presentation-guide1_page-0002" src="https://github.com/user-attachments/assets/207583cf-5a1a-4f99-a287-05aab39ce4b9" />
+<img width="1240" height="1755" alt="page-and-pine-project-presentation-guide1_page-0001" src="https://github.com/user-attachments/assets/723ff7e9-3744-4dcd-b0d0-be9f824ef5a6" />
